@@ -118,10 +118,33 @@
     ]
   };
 
+  /* ========= Utilidades de “un voto por dispositivo” ========= */
+  const STORAGE_KEYS = {
+    deviceId: 'consulta_device_id_8m',
+    hasVoted: 'consulta_has_voted_8m'
+  };
+
+  function getCookie(name){
+    const m = document.cookie.match(new RegExp('(^| )'+name+'=([^;]+)')); return m ? decodeURIComponent(m[2]) : null;
+  }
+  function setCookie(name, value, days=365){
+    const maxAge = days*24*60*60; document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
+  }
+  function getDeviceId(){
+    let id = localStorage.getItem(STORAGE_KEYS.deviceId) || getCookie('device_id_8m');
+    if(!id){
+      id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'dev-' + Math.random().toString(36).slice(2) + Date.now();
+      localStorage.setItem(STORAGE_KEYS.deviceId, id);
+      setCookie('device_id_8m', id, 365);
+    }
+    return id;
+  }
+  function hasVoted(){ return localStorage.getItem(STORAGE_KEYS.hasVoted) === 'true'; }
+  function markVoted(){ localStorage.setItem(STORAGE_KEYS.hasVoted, 'true'); }
+
   /* ====== Render de tarjetas ====== */
   const bySlug = Object.fromEntries(DATA.records.map(r => [r.slug, r]));
   const content = document.getElementById('content');
-  const resumen = document.getElementById('resumen');
   const panelVoto = document.getElementById('panelVoto');
   const selNombre = document.getElementById('selNombre');
   const kpiTotal = document.getElementById('kpiTotal');
@@ -129,7 +152,7 @@
   const barCandidato = document.getElementById('barCandidato');
   const tablaConsultas = document.getElementById('tablaConsultas');
 
-  // Votos locales de sesión
+  // Votos locales (pedagógico)
   const votesByCandidate = Object.fromEntries(DATA.records.map(r => [r.name, 0]));
   let totalVotes = 0;
 
@@ -174,6 +197,9 @@
       sec.appendChild(grid);
       content.appendChild(sec);
     });
+
+    // Si ya votó en este dispositivo, bloquear UI desde el inicio
+    if (hasVoted()) lockVotingUI();
   }
 
   function focusTile(el){
@@ -182,14 +208,55 @@
     el.setAttribute('tabindex','0'); el.focus();
   }
 
-  /* ====== Selección única + conteo local ====== */
+  // Aviso (toast) discreto
+  function toast(msg){
+    let el = document.getElementById('__toast');
+    if(!el){
+      el = document.createElement('div'); el.id='__toast';
+      el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.18);font-size:.95rem;z-index:9999;opacity:.98';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.display='block';
+    clearTimeout(el.__t);
+    el.__t = setTimeout(()=>{ el.style.display='none'; }, 2200);
+  }
+
+  function lockVotingUI(){
+    document.querySelectorAll('.tile').forEach(t=>{
+      t.classList.add('disabled');
+      t.style.pointerEvents='none';
+    });
+  }
+
+  /* ====== Envío (sin textos en UI) ====== */
+  const GOOGLE_SHEET_API = "https://script.google.com/macros/s/AKfycbzrcOa_YqUlAyU9ECe99Bosk_VQttAOmB5l3oLy2dmeL0Cg9gTiHd133pxn0qsKd-MvJA/exec";
+  let lastSent = null;
+  async function enviarRegistro(nombreCandidato, deviceId){
+    try{
+      // “no-cors” para simplicidad; el back valida duplicados por deviceId
+      await fetch(GOOGLE_SHEET_API, {
+        method:'POST', mode:'no-cors',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ candidato: nombreCandidato, deviceId })
+      });
+      lastSent = deviceId;
+    }catch(e){ /* silencioso */ }
+  }
+
+  /* ====== Selección única + un voto por dispositivo ====== */
   function selectBySlug(slug){
-    // selección única (refuerza la regla)
+    if (hasVoted()){
+      toast('Ya registraste tu participación en este dispositivo.');
+      return;
+    }
+
+    // selección única
     document.querySelectorAll('.tile').forEach(t=>{ t.classList.remove('selected'); t.setAttribute('aria-checked','false'); });
     const chosen = document.querySelector(`.tile[data-slug="${slug}"]`);
     if(chosen){ chosen.classList.add('selected'); chosen.setAttribute('aria-checked','true'); }
 
-    // registrar voto local
+    // registrar conteo local (pedagógico)
     const rec = bySlug[slug];
     const name = rec ? rec.name : null;
     if(!name) return;
@@ -197,33 +264,35 @@
     votesByCandidate[name] = (votesByCandidate[name] || 0) + 1;
     totalVotes += 1;
 
-    // actualizar panel
-    selNombre.textContent = name;
-    kpiTotal.textContent = totalVotes.toString();
-
+    // KPIs locales
+    document.getElementById('panelVoto').hidden = false;
+    document.getElementById('selNombre').textContent = name;
+    document.getElementById('kpiTotal').textContent = String(totalVotes);
     const vC = votesByCandidate[name] || 0;
     const pC = totalVotes > 0 ? Math.round((vC/totalVotes)*100) : 0;
-    kpiCandidato.textContent = pC + '%';
-    barCandidato.style.width = pC + '%';
+    document.getElementById('kpiCandidato').textContent = pC + '%';
+    document.getElementById('barCandidato').style.width = pC + '%';
 
-    panelVoto.hidden = false;
-
-    // actualizar tabla por consulta
     renderConsultaPercents();
+
+    // marcar dispositivo y bloquear
+    markVoted();
+    lockVotingUI();
+    toast('Tu selección ha sido registrada en este dispositivo.');
+
+    // Envío con deviceId para que el servidor ignore duplicados
+    const deviceId = getDeviceId();
+    if (lastSent !== deviceId) enviarRegistro(name, deviceId);
   }
 
   function renderConsultaPercents(){
-    // Suma votos de cada consulta
     const sumConsulta = DATA.consultas.map(c => {
-      const names = c.candidates
-        .map(slug => bySlug[slug]?.name)
-        .filter(Boolean);
+      const names = c.candidates.map(slug => bySlug[slug]?.name).filter(Boolean);
       const votos = names.reduce((acc,n)=> acc + (votesByCandidate[n] || 0), 0);
       return { title: c.title, votos };
     });
-
     const total = sumConsulta.reduce((a,b)=>a+b.votos, 0);
-    // construir tabla
+
     const rows = sumConsulta.map(({title, votos}) => {
       const pct = total > 0 ? Math.round((votos/total)*100) : 0;
       return `
@@ -239,7 +308,7 @@
         </tr>`;
     }).join('');
 
-    tablaConsultas.innerHTML = `
+    document.getElementById('tablaConsultas').innerHTML = `
       <table class="table">
         <thead>
           <tr>
@@ -249,7 +318,7 @@
           </tr>
         </thead>
         <tbody>
-          ${rows || '<tr><td colspan="3" class="muted t-left">Aún no hay votos registrados en esta sesión.</td></tr>'}
+          ${rows || '<tr><td colspan="3" class="muted t-left">Aún no hay votos en esta sesión.</td></tr>'}
         </tbody>
         ${total>0 ? `<tfoot>
           <tr class="total">
