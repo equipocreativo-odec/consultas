@@ -13,7 +13,6 @@
     --error: #b00020;
     --bg: #0f172a;
     --fg: #e5e7eb;
-    --x-color: #e11d48; /* color de la X */
   }
   * { box-sizing: border-box; }
   body {
@@ -32,10 +31,12 @@
     aspect-ratio: 678 / 531; /* ajusta si tu imagen tiene otra proporción */
     background: #0a0f1c; border-radius: 10px; overflow: hidden; border: 1px solid #1f2937;
   }
-  .ballot img {
+  .ballot img.base {
     position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
     user-select: none; -webkit-user-drag: none; pointer-events: none;
   }
+
+  /* Zonas clicables (botón transparente) */
   .hotspot {
     position: absolute; cursor: pointer; outline: none; border: none; background: transparent;
   }
@@ -50,20 +51,18 @@
     border-radius: 6px;
   }
 
-  /* Marcador en X (siempre una sola X que se mueve a la casilla seleccionada) */
+  /* Marcador con tu X.png (siempre uno que se reposiciona) */
   #markX {
     position: absolute; display: none; pointer-events: none;
-    color: var(--x-color);
-    text-shadow: 0 1px 2px rgba(0,0,0,.6);
-    font-weight: 900; font-size: 52px; line-height: 1;
-    display: grid; place-items: center;
-    background: rgba(225, 29, 72, 0.08);
-    border: 2px solid rgba(225, 29, 72, 0.45);
-    border-radius: 6px;
+    /* el contenedor define el área; la imagen se ajusta adentro */
   }
-  @media (max-width: 640px) {
-    #markX { font-size: 40px; }
+  #markX img {
+    position: absolute; inset: 8% 8% 8% 8%; /* margen interno opcional para que no toque bordes */
+    width: 84%; height: 84%; object-fit: contain;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,.35));
+    opacity: 0.96; /* ajustable */
   }
+
   .legend {
     display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; color: #cbd5e1;
   }
@@ -75,9 +74,7 @@
   details.summary-card {
     margin-top: 14px; border-top: 1px dashed #1f2937; padding-top: 12px;
   }
-  details > summary {
-    cursor: pointer; list-style: none; font-weight: 700;
-  }
+  details > summary { cursor: pointer; list-style: none; font-weight: 700; }
   details > summary::-webkit-details-marker { display: none; }
   .footer { font-size: 12px; color: #9ca3af; margin-top: 8px; }
   code.kbd {
@@ -89,7 +86,7 @@
   <header>
     <h1>Simulacro de Consultas</h1>
     <div class="legend">
-      <span class="pill">Haz clic en una casilla → se marcará con una “X”</span>
+      <span class="pill">Haz clic en una casilla → se marcará con tu “X”</span>
       <span class="pill">Se registra un voto en Sheets</span>
       <span class="pill">Tecla <code class="kbd">H</code> → alterna modo ayuda</span>
     </div>
@@ -97,11 +94,14 @@
 
   <section class="card">
     <div id="ballot" class="ballot" aria-label="Tarjetón interactivo">
-      <!-- Tu imagen del tarjetón -->
-      <img src="Consultas.png" alt="Tarjetón de práctica" />
-      <!-- Marcador global en X (se reposiciona) -->
-      <div id="markX" aria-hidden="true">X</div>
-      <!-- Los hotspots se inyectan por JS -->
+      <!-- Imagen del tarjetón -->
+      Consultas.png
+
+      <!-- Marcador global: se reposiciona sobre la casilla elegida -->
+      <div id="markX" aria-hidden="true">
+        X.png
+      </div>
+      <!-- Hotspots se inyectan por JS -->
     </div>
 
     <div id="status" class="status" role="status" aria-live="polite"></div>
@@ -112,48 +112,5 @@
       <ul>
         <li><strong>Marca una sola opción en esta tarjeta.</strong> Este recurso es un simulador con fines educativos.</li>
         <li>El objetivo es que la ciudadanía practique la ubicación de casillas y la selección correcta.</li>
-        <li>Este simulacro no es un sistema oficial de votación; no define resultados electorales.</li>
+        <li>Este simulador no es un sistema oficial de votación; no define resultados electorales.</li>
         <li>No se capturan datos personales; solo se almacena la opción elegida y metadatos técnicos mínimos para el conteo pedagógico.</li>
-        <li>Secciones del material de referencia: <em>“Frente por la vida”</em>, <em>“La gran consulta por Colombia”</em> y <em>“Consulta de las soluciones: salud, seguridad y educación”</em>.</li>
-      </ul>
-    </details>
-
-    <div class="footer">Tip: usa la tecla <b>H</b> para alinear las zonas con precisión antes de compartir el simulador.</div>
-  </section>
-
-<script>
-/** ==============================
- * CONFIGURA AQUÍ
- * ============================== */
-const WEBAPP_URL =
-  'https://script.google.com/macros/s/AKfycbyJzMK97YU8JDd8W7X9ZyQei3tCuz4u327WKLvmqjtVSvET4f_LwOOSCn5_FyZ_o7hb/exec';
-
-let HELP_MODE = false;
-
-/* Zonas clicables en % relativas al contenedor.
-   Ajusta top/left/width/height para calzar con tu imagen. */
-const AREAS = [
-  /* ——— Fila 1: “Consulta de las soluciones” (2 opciones) ——— */
-  { id: 'sol-1', label: 'Opción 1', top: 5, left: 5,  width: 35, height: 18 },
-  { id: 'sol-2', label: 'Opción 2', top: 5, left: 60, width: 35, height: 18 },
-
-  /* ——— Bloque central: “La gran consulta por Colombia” ——— */
-  // Fila superior
-  { id: 'gran-1', label: 'Opción 3',  top: 28, left: 3,  width: 14, height: 18 },
-  { id: 'gran-2', label: 'Opción 4',  top: 28, left: 19, width: 14, height: 18 },
-  { id: 'gran-3', label: 'Opción 5',  top: 28, left: 35, width: 14, height: 18 },
-  { id: 'gran-4', label: 'Opción 6',  top: 28, left: 51, width: 14, height: 18 },
-  { id: 'gran-5', label: 'Opción 7',  top: 28, left: 67, width: 14, height: 18 },
-  { id: 'gran-6', label: 'Opción 8',  top: 28, left: 83, width: 14, height: 18 },
-
-  // Fila inferior
-  { id: 'gran-7',  label: 'Opción 9',  top: 48, left: 3,  width: 14, height: 18 },
-  { id: 'gran-8',  label: 'Opción 10', top: 48, left: 19, width: 14, height: 18 },
-  { id: 'gran-9',  label: 'Opción 11', top: 48, left: 35, width: 14, height: 18 },
-  { id: 'gran-10', label: 'Opción 12', top: 48, left: 51, width: 14, height: 18 },
-  { id: 'gran-11', label: 'Opción 13', top: 48, left: 67, width: 14, height: 18 },
-
-  /* ——— Bloque inferior: “Frente por la vida” (5 opciones) ——— */
-  { id: 'vida-1', label: 'Opción 14', top: 72, left: 5,  width: 17, height: 22 },
-  { id: 'vida-2', label: 'Opción 15', top: 72, left: 24, width: 17, height: 22 },
-  { id: 'vida-3', label: 'Opción 16', top: 72, left: 43, width: 17, height: 22 },
