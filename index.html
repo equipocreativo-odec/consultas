@@ -1,25 +1,66 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Tarjetón por Consultas – Selección única + Google Sheets</title>
+<title>Consulta 8 de marzo – Ejercicio pedagógico</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<header>
-  <h1>Tarjetón por consultas</h1>
-  <p class="sub">Regla de voto válido: <strong>una sola marca</strong> en todo el tarjetón.</p>
+<header class="banner">
+  <div class="banner__content">
+    <h1 class="banner__title">Consulta 8 de marzo</h1>
+    <p class="banner__subtitle">
+      <strong>Regla:</strong> <span class="u-nowrap">marcar más de una opción anula el voto</span> ·
+      <strong>Nota:</strong> este es un ejercicio pedagógico
+    </p>
+  </div>
 </header>
 
-<div class="container">
-  <div class="notice">Recurso educativo. Al seleccionar, se envía automáticamente el registro al sistema.</div>
+<main class="container">
+  <section class="notice">
+    <span class="badge">Pedagógico</span>
+    Practica cómo votar: marca con una <strong>X</strong> <u>una sola</u> opción. La interfaz impide múltiples marcas.
+  </section>
+
   <div id="content"></div>
-  <div class="resume">Candidato marcado: <span id="resumen">—</span></div>
-</div>
+
+  <!-- Panel al votar -->
+  <section id="panelVoto" class="panel" hidden>
+    <h3 class="panel__title">Tu selección</h3>
+    <p class="panel__text">
+      Candidato marcado: <strong id="selNombre">—</strong>
+    </p>
+
+    <div class="kpis">
+      <div class="kpi">
+        <div class="kpi__label">Votos registrados en esta sesión</div>
+        <div class="kpi__value" id="kpiTotal">0</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi__label">% del candidato seleccionado</div>
+        <div class="kpi__value" id="kpiCandidato">0%</div>
+        <div class="meter" aria-hidden="true">
+          <div class="meter__bar" id="barCandidato" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Resultados por consulta -->
+  <section class="results">
+    <h3>Porcentaje de votos por consulta</h3>
+    <p class="muted">Calculado sumando los votos de los candidatos de cada consulta sobre el total de votos de la sesión.</p>
+    <div id="tablaConsultas"></div>
+  </section>
+</main>
+
+<footer class="footer">
+  <small>© 2026 · Ejercicio pedagógico sin validez oficial</small>
+</footer>
 
 <script>
+  /* ====== Datos (candidatos + consultas) ====== */
   const DATA = {
     "records": [
       {"name":"Claudia Nayibe López Hernández","slug":"claudia-nayibe-lopez-hernandez","photo":"assets/photo-claudia-nayibe-lopez-hernandez.png","logo":"assets/logo-claudia-nayibe-lopez-hernandez.png"},
@@ -40,21 +81,57 @@
       {"name":"Daniel Quintero Calle","slug":"daniel-quintero-calle","photo":"assets/photo-daniel-quintero-calle.png","logo":"assets/logo-daniel-quintero-calle.png"}
     ],
     "consultas": [
-      {"title":"Consulta de las Soluciones","subtitle":"Salud, seguridad y educación","candidates":[
-        "claudia-nayibe-lopez-hernandez","leonardo-humberto-huerta-gutierrez"
-      ]},
-      {"title":"La Gran Consulta por Colombia","subtitle":"","candidates":[
-        "mauricio-cardenas-santamaria","david-andres-luna-sanchez","victoria-eugenia-davila-hoyos","juan-manuel-galan-pachon","paloma-susana-valencia-laserna","juan-carlos-pinzon-bueno","anibal-gaviria-correa","enrique-penalosa-londono","juan-daniel-oviedo-arango"
-      ]},
-      {"title":"Consulta del Frente por la Vida","subtitle":"","candidates":[
-        "hector-elias-pineda-salazar","edison-lucio-torres-moreno","roy-leonardo-barreras-montealegre","martha-viviana-bernal-amaya","daniel-quintero-calle"
-      ]}
+      {
+        "title": "Consulta de las Soluciones",
+        "subtitle": "Salud, seguridad y educación",
+        "candidates": [
+          "claudia-nayibe-lopez-hernandez",
+          "leonardo-humberto-huerta-gutierrez"
+        ]
+      },
+      {
+        "title": "La Gran Consulta por Colombia",
+        "subtitle": "",
+        "candidates": [
+          "mauricio-cardenas-santamaria",
+          "david-andres-luna-sanchez",
+          "victoria-eugenia-davila-hoyos",
+          "juan-manuel-galan-pachon",
+          "paloma-susana-valencia-laserna",
+          "juan-carlos-pinzon-bueno",
+          "anibal-gaviria-correa",
+          "enrique-penalosa-londono",
+          "juan-daniel-oviedo-arango"
+        ]
+      },
+      {
+        "title": "Consulta del Frente por la Vida",
+        "subtitle": "",
+        "candidates": [
+          "hector-elias-pineda-salazar",
+          "edison-lucio-torres-moreno",
+          "roy-leonardo-barreras-montealegre",
+          "martha-viviana-bernal-amaya",
+          "daniel-quintero-calle"
+        ]
+      }
     ]
   };
 
+  /* ====== Render de tarjetas ====== */
   const bySlug = Object.fromEntries(DATA.records.map(r => [r.slug, r]));
   const content = document.getElementById('content');
   const resumen = document.getElementById('resumen');
+  const panelVoto = document.getElementById('panelVoto');
+  const selNombre = document.getElementById('selNombre');
+  const kpiTotal = document.getElementById('kpiTotal');
+  const kpiCandidato = document.getElementById('kpiCandidato');
+  const barCandidato = document.getElementById('barCandidato');
+  const tablaConsultas = document.getElementById('tablaConsultas');
+
+  // Votos locales de sesión
+  const votesByCandidate = Object.fromEntries(DATA.records.map(r => [r.name, 0]));
+  let totalVotes = 0;
 
   function render(){
     content.innerHTML = '';
@@ -62,14 +139,20 @@
       const sec = document.createElement('section');
       sec.className = 'consulta';
       const h = document.createElement('h2'); h.textContent = g.title; sec.appendChild(h);
-      if (g.subtitle){ const p = document.createElement('p'); p.className = 'subtitle'; p.textContent = g.subtitle; sec.appendChild(p); }
+      if (g.subtitle){
+        const p = document.createElement('p'); p.className = 'subtitle'; p.textContent = g.subtitle; sec.appendChild(p);
+      }
       const grid = document.createElement('div'); grid.className = 'grid';
 
       g.candidates.forEach((slug, idx) => {
         const c = bySlug[slug]; if(!c) return;
         const tile = document.createElement('div');
-        tile.className = 'tile'; tile.setAttribute('role','radio'); tile.setAttribute('aria-checked','false');
-        tile.setAttribute('tabindex', (gidx===0 && idx===0) ? '0':'-1'); tile.dataset.slug = slug;
+        tile.className = 'tile';
+        tile.setAttribute('role','radio');
+        tile.setAttribute('aria-checked','false');
+        tile.setAttribute('tabindex', (gidx===0 && idx===0) ? '0':'-1');
+        tile.dataset.slug = slug;
+
         tile.innerHTML = `
           <img class="photo" loading="lazy" src="${c.photo}" alt="Foto de ${c.name}">
           <div class="logo-wrap"><img class="logo" loading="lazy" src="${c.logo}" alt="Logo de ${c.name}"></div>
@@ -88,39 +171,100 @@
         grid.appendChild(tile);
       });
 
-      sec.appendChild(grid); content.appendChild(sec);
+      sec.appendChild(grid);
+      content.appendChild(sec);
     });
   }
 
-  function focusTile(el){ if(!el) return; document.querySelectorAll('.tile').forEach(t=>t.setAttribute('tabindex','-1')); el.setAttribute('tabindex','0'); el.focus(); }
-
-  // Envío automático a Google Sheets
-  const GOOGLE_SHEET_API = "https://script.google.com/macros/s/AKfycbzrcOa_YqUlAyU9ECe99Bosk_VQttAOmB5l3oLy2dmeL0Cg9gTiHd133pxn0qsKd-MvJA/exec";
-  let lastSent = null;
-  async function registrarVotoAutomatico(nombreCandidato){
-    if(!nombreCandidato) return;
-    if(lastSent === nombreCandidato) { /* evita duplicados inmediatos */ }
-    try{
-      await fetch(GOOGLE_SHEET_API, {
-        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidato: nombreCandidato })
-      });
-      lastSent = nombreCandidato;
-      console.log('Voto enviado a Google Sheets:', nombreCandidato);
-    }catch(err){ console.warn('No se pudo enviar el voto ahora.'); }
+  function focusTile(el){
+    if(!el) return;
+    document.querySelectorAll('.tile').forEach(t=>t.setAttribute('tabindex','-1'));
+    el.setAttribute('tabindex','0'); el.focus();
   }
 
+  /* ====== Selección única + conteo local ====== */
   function selectBySlug(slug){
+    // selección única (refuerza la regla)
     document.querySelectorAll('.tile').forEach(t=>{ t.classList.remove('selected'); t.setAttribute('aria-checked','false'); });
     const chosen = document.querySelector(`.tile[data-slug="${slug}"]`);
     if(chosen){ chosen.classList.add('selected'); chosen.setAttribute('aria-checked','true'); }
+
+    // registrar voto local
     const rec = bySlug[slug];
     const name = rec ? rec.name : null;
-    resumen.textContent = name || '—';
-    registrarVotoAutomatico(name);
+    if(!name) return;
+
+    votesByCandidate[name] = (votesByCandidate[name] || 0) + 1;
+    totalVotes += 1;
+
+    // actualizar panel
+    selNombre.textContent = name;
+    kpiTotal.textContent = totalVotes.toString();
+
+    const vC = votesByCandidate[name] || 0;
+    const pC = totalVotes > 0 ? Math.round((vC/totalVotes)*100) : 0;
+    kpiCandidato.textContent = pC + '%';
+    barCandidato.style.width = pC + '%';
+
+    panelVoto.hidden = false;
+
+    // actualizar tabla por consulta
+    renderConsultaPercents();
+  }
+
+  function renderConsultaPercents(){
+    // Suma votos de cada consulta
+    const sumConsulta = DATA.consultas.map(c => {
+      const names = c.candidates
+        .map(slug => bySlug[slug]?.name)
+        .filter(Boolean);
+      const votos = names.reduce((acc,n)=> acc + (votesByCandidate[n] || 0), 0);
+      return { title: c.title, votos };
+    });
+
+    const total = sumConsulta.reduce((a,b)=>a+b.votos, 0);
+    // construir tabla
+    const rows = sumConsulta.map(({title, votos}) => {
+      const pct = total > 0 ? Math.round((votos/total)*100) : 0;
+      return `
+        <tr>
+          <td class="t-left">${title}</td>
+          <td class="t-right">${votos}</td>
+          <td class="t-right">${pct}%</td>
+        </tr>
+        <tr class="row-meter">
+          <td colspan="3">
+            <div class="meter meter--thin"><div class="meter__bar" style="width:${pct}%"></div></div>
+          </td>
+        </tr>`;
+    }).join('');
+
+    tablaConsultas.innerHTML = `
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="t-left">Consulta</th>
+            <th class="t-right">Votos</th>
+            <th class="t-right">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || '<tr><td colspan="3" class="muted t-left">Aún no hay votos registrados en esta sesión.</td></tr>'}
+        </tbody>
+        ${total>0 ? `<tfoot>
+          <tr class="total">
+            <td class="t-left">Total</td>
+            <td class="t-right">${total}</td>
+            <td class="t-right">100%</td>
+          </tr>
+        </tfoot>` : '' }
+      </table>
+    `;
   }
 
   render();
+  renderConsultaPercents();
 </script>
 </body>
 </html>
+``
