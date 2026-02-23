@@ -95,6 +95,14 @@
     ]
   };
 
+  <section class="results">
+  <div class="container">
+    <h3>Resultados globales por consulta (en tiempo real)</h3>
+    <p class="muted">Los porcentajes corresponden a la proporción de votos globales de cada consulta.</p>
+    <div id="tablaConsultas"></div>
+  </div>
+</section>
+  
   /* ====== Utilidades “un voto por dispositivo” ====== */
   const KEYS = { deviceId:'consulta_device_id_8m', hasVoted:'consulta_has_voted_8m' };
   function getCookie(n){ const m=document.cookie.match(new RegExp('(^| )'+n+'=([^;]+)')); return m?decodeURIComponent(m[2]):null; }
