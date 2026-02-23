@@ -3,14 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Simulacro de Consultas - Tarjetón Interactivo</title>
+<title>Simulacro de Consultas - Detección Automática + X</title>
 <style>
   :root {
     --spot-color: rgba(0, 128, 255, 0.18);
     --spot-border: rgba(0, 128, 255, 0.9);
-    --ok: #0a7f2e;
-    --warn: #b76b00;
-    --error: #b00020;
+    --ok: #0a7f2e; --warn: #b76b00; --error: #b00020;
     --grid: rgba(255,255,255,.08);
   }
   * { box-sizing: border-box; }
@@ -26,21 +24,20 @@
   }
   .ballot {
     position: relative; width: 100%;
-    aspect-ratio: 872 / 1112; /* <-- PROPORCIÓN REAL */
+    aspect-ratio: 872 / 1112; /* Proporción real de Consultas.png */
     background: #0a0f1c; border-radius: 10px; overflow: hidden; border: 1px solid #1f2937;
   }
   .ballot img.base {
     position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
     z-index: 1; user-select: none; -webkit-user-drag: none; pointer-events: none;
   }
-
-  /* Rejilla de apoyo (toggle con G) */
+  /* Rejilla (G) */
   .grid {
     position: absolute; inset: 0; z-index: 2; pointer-events: none; display: none;
     background-image:
       linear-gradient(to right, var(--grid) 1px, transparent 1px),
       linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-    background-size: calc(100%/6) 100%, 100% calc(100%/8); /* 6 columnas, 8 filas aprox */
+    background-size: calc(100%/6) 100%, 100% calc(100%/8);
   }
   .grid.on { display: block; }
 
@@ -69,45 +66,87 @@
     border-radius: 6px;
   }
 
+  /* Panel de calibración (aparece con H) */
+  #calPanel {
+    display: none; margin-top: 10px; padding: 10px; border: 1px dashed #1f2937; border-radius: 8px;
+    background: #0c1426;
+  }
+  #calPanel.on { display: block; }
+  #calPanel .row { display: grid; grid-template-columns: 140px 1fr 70px; gap: 10px; align-items: center; margin-bottom: 8px; }
+  #calPanel input[type="range"] { width: 100%; }
+  #calPanel code { color: #cbd5e1; }
+
   .status { margin-top: 10px; font-size: 14px; min-height: 22px; }
-  .status.ok { color: var(--ok); }
-  .status.warn { color: var(--warn); }
-  .status.error { color: var(--error); }
+  .status.ok { color: var(--ok); } .status.warn { color: var(--warn); } .status.error { color: var(--error); }
 
   details.summary-card { margin-top: 14px; border-top: 1px dashed #1f2937; padding-top: 12px; }
   details > summary { cursor: pointer; list-style: none; font-weight: 700; }
   details > summary::-webkit-details-marker { display: none; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .toolbar button {
+    padding: 6px 10px; border: 1px solid #1f2937; background: #0f1a33; color: #e5e7eb;
+    border-radius: 8px; cursor: pointer;
+  }
+  .toolbar button:hover { background: #132040; }
 </style>
 </head>
 <body>
   <header>
     <h1>Simulacro de Consultas</h1>
-    <p>Haz clic en una casilla: se marcará con tu “X” y quedará el registro en Sheets. Teclas: <b>H</b> (modo ayuda) y <b>G</b> (rejilla).</p>
+    <p>
+      Detección automática de zonas con rostros + selección con tu “X”.  
+      Teclas: <b>H</b> (ayuda/panel), <b>G</b> (rejilla). Si tu navegador no soporta FaceDetector, usa el botón <i>Añadir zona</i> o el modo captura.
+    </p>
   </header>
 
   <section class="card">
+    <div class="toolbar">
+      <button id="btnDetect">Detectar rostros</button>
+      <button id="btnAddArea">Añadir zona (manual)</button>
+      <button id="btnToggleHelp">Ver/ocultar ayuda (H)</button>
+      <button id="btnToggleGrid">Ver/ocultar rejilla (G)</button>
+      <span id="detectInfo"></span>
+    </div>
+
     <div id="ballot" class="ballot" aria-label="Tarjetón interactivo">
-      <!-- Imagen base (872×1112) -->
-      <img class="base" src="Consultas.png" alt="Tarjetón" />
-
-      <!-- Rejilla de apoyo -->
+      <img class="base" src="Consultas.png" alt="Tarjetón" id="baseImg" />
       <div id="grid" class="grid" aria-hidden="true"></div>
-
-      <!-- Marcador global (X.png) que se reposiciona -->
-      <div id="markX" aria-hidden="true">
-        <img src="X.png" alt="" />
-      </div>
-      <!-- Hotspots se crean por JS -->
+      <div id="markX" aria-hidden="true"><img src="X.png" alt=""></div>
+      <!-- Zonas se inyectan por JS -->
     </div>
 
     <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <!-- Panel de calibración (aparece con H) -->
+    <div id="calPanel">
+      <div class="row">
+        <label>Escala X (ancho):</label>
+        <input id="scaleX" type="range" min="1.0" max="3.0" step="0.05" value="1.80"/>
+        <code id="valScaleX">1.80×</code>
+      </div>
+      <div class="row">
+        <label>Escala Y (alto):</label>
+        <input id="scaleY" type="range" min="1.0" max="3.0" step="0.05" value="2.10"/>
+        <code id="valScaleY">2.10×</code>
+      </div>
+      <div class="row">
+        <label>Offset X (%):</label>
+        <input id="offX" type="range" min="-10" max="10" step="0.5" value="0"/>
+        <code id="valOffX">0%</code>
+      </div>
+      <div class="row">
+        <label>Offset Y (%):</label>
+        <input id="offY" type="range" min="-15" max="15" step="0.5" value="0"/>
+        <code id="valOffY">0%</code>
+      </div>
+    </div>
 
     <!-- Información pedagógica -->
     <details class="summary-card" open>
       <summary>Información pedagógica</summary>
       <ul>
-        <li><strong>Marca una sola opción en esta tarjeta.</strong> Este simulador es de uso educativo.</li>
-        <li>El objetivo es practicar la ubicación de casillas y cómo seleccionar correctamente.</li>
+        <li><strong>Marca una sola opción en esta tarjeta.</strong> Este simulador es para fines educativos.</li>
+        <li>El objetivo es practicar la ubicación de casillas y la selección correcta.</li>
         <li>Este simulador no es un sistema oficial de votación; sus resultados no son vinculantes.</li>
         <li>Privacidad: no se recopilan datos personales; se guarda la opción elegida y metadatos técnicos mínimos para el conteo pedagógico.</li>
       </ul>
@@ -116,7 +155,7 @@
 
 <script>
 /** ==============================
- * CONFIGURACIÓN
+ * CONFIG
  * ============================== */
 const WEBAPP_URL =
   'https://script.google.com/macros/s/AKfycbyJzMK97YU8JDd8W7X9ZyQei3tCuz4u327WKLvmqjtVSvET4f_LwOOSCn5_FyZ_o7hb/exec';
@@ -124,67 +163,68 @@ const WEBAPP_URL =
 let HELP_MODE = false;
 let GRID_MODE = false;
 
-/* Zonas clicables (porcentajes relativos al contenedor).
-   ⚠️ Estas son aproximadas para el layout vertical; ajústalas con H/G. */
-const AREAS = [
-  /* ——— Sección superior (“Consulta de las soluciones”) ——— */
-  { id: 'sol-1', label: 'Opción 1', top: 8, left: 8,  width: 36, height: 14 },
-  { id: 'sol-2', label: 'Opción 2', top: 8, left: 56, width: 36, height: 14 },
+// Parámetros de expansión alrededor del rostro detectado
+const expand = {
+  scaleX: 1.80, // multiplicador ancho
+  scaleY: 2.10, // multiplicador alto
+  offX: 0.0,    // desplazamiento horizontal en %
+  offY: 0.0     // desplazamiento vertical en %
+};
 
-  /* ——— Bloque medio (“La gran consulta por Colombia”) ——— */
-  /* Fila 1 (6 casillas aprox) */
-  { id: 'gran-1', label: 'Opción 3',  top: 28, left: 6,  width: 14, height: 13 },
-  { id: 'gran-2', label: 'Opción 4',  top: 28, left: 22, width: 14, height: 13 },
-  { id: 'gran-3', label: 'Opción 5',  top: 28, left: 38, width: 14, height: 13 },
-  { id: 'gran-4', label: 'Opción 6',  top: 28, left: 54, width: 14, height: 13 },
-  { id: 'gran-5', label: 'Opción 7',  top: 28, left: 70, width: 14, height: 13 },
-  { id: 'gran-6', label: 'Opción 8',  top: 28, left: 86, width: 8,  height: 28 }, /* columna lateral alta (si aplica) */
+// Zonas clicables
+const AREAS = [];
 
-  /* Fila 2 (5 casillas) */
-  { id: 'gran-7',  label: 'Opción 9',  top: 44, left: 6,  width: 14, height: 13 },
-  { id: 'gran-8',  label: 'Opción 10', top: 44, left: 22, width: 14, height: 13 },
-  { id: 'gran-9',  label: 'Opción 11', top: 44, left: 38, width: 14, height: 13 },
-  { id: 'gran-10', label: 'Opción 12', top: 44, left: 54, width: 14, height: 13 },
-  { id: 'gran-11', label: 'Opción 13', top: 44, left: 70, width: 14, height: 13 },
+/** ==============================
+ * ELEMENTOS
+ * ============================== */
+const ballotEl  = document.getElementById('ballot');
+const statusEl  = document.getElementById('status');
+const gridEl    = document.getElementById('grid');
+const markX     = document.getElementById('markX');
+const baseImg   = document.getElementById('baseImg');
+const detectBtn = document.getElementById('btnDetect');
+const addBtn    = document.getElementById('btnAddArea');
+const helpBtn   = document.getElementById('btnToggleHelp');
+const gridBtn   = document.getElementById('btnToggleGrid');
+const detectInfo= document.getElementById('detectInfo');
 
-  /* ——— Parte inferior (“Frente por la vida”) ——— */
-  { id: 'vida-1', label: 'Opción 14', top: 66, left: 8,  width: 16, height: 18 },
-  { id: 'vida-2', label: 'Opción 15', top: 66, left: 28, width: 16, height: 18 },
-  { id: 'vida-3', label: 'Opción 16', top: 66, left: 48, width: 16, height: 18 },
-  { id: 'vida-4', label: 'Opción 17', top: 66, left: 68, width: 16, height: 18 },
-  { id: 'vida-5', label: 'Opción 18', top: 66, left: 86, width: 10, height: 18 },
-];
+const scaleXInp = document.getElementById('scaleX');
+const scaleYInp = document.getElementById('scaleY');
+const offXInp   = document.getElementById('offX');
+const offYInp   = document.getElementById('offY');
+const valScaleX = document.getElementById('valScaleX');
+const valScaleY = document.getElementById('valScaleY');
+const valOffX   = document.getElementById('valOffX');
+const valOffY   = document.getElementById('valOffY');
 
-/* ===============================
-   LÓGICA
-   =============================== */
-const ballotEl = document.getElementById('ballot');
-const statusEl = document.getElementById('status');
-const markX = document.getElementById('markX');
-const gridEl = document.getElementById('grid');
+/** ==============================
+ * UTILIDADES
+ * ============================== */
+function pct(v,total){ return (v/total)*100; }
+function clamp(n,min,max){ return Math.min(max, Math.max(min, n)); }
+function fmt(n){ return (Math.round(n*100)/100).toFixed(2); }
+function showStatus(msg, kind){ statusEl.textContent = msg; statusEl.className = 'status ' + (kind||''); }
 
-function pct(v){ return v + '%'; }
-
-/* Renderiza hotspots y restaura selección */
-function drawSpots() {
-  // Limpia anteriores
+function clearSpots(){
   Array.from(ballotEl.querySelectorAll('.hotspot')).forEach(el => el.remove());
+}
 
-  // Crea botones clicables
+function drawSpots(){
+  clearSpots();
   for (const a of AREAS) {
     const btn = document.createElement('button');
     btn.className = 'hotspot' + (HELP_MODE ? ' help' : '');
-    btn.style.top = pct(a.top);
-    btn.style.left = pct(a.left);
-    btn.style.width = pct(a.width);
-    btn.style.height = pct(a.height);
+    btn.style.top    = a.top + '%';
+    btn.style.left   = a.left + '%';
+    btn.style.width  = a.width + '%';
+    btn.style.height = a.height + '%';
     btn.setAttribute('aria-label', a.label);
     btn.setAttribute('data-label', a.label);
     btn.title = a.label;
     btn.addEventListener('click', () => handleSelect(a));
     ballotEl.appendChild(btn);
   }
-
+  // si había selección previa, reubicar X
   const savedId = sessionStorage.getItem('selectedAreaId');
   if (savedId) {
     const prev = AREAS.find(x => x.id === savedId);
@@ -192,17 +232,99 @@ function drawSpots() {
   }
 }
 
-/* Posiciona la X dentro de la casilla seleccionada */
-function positionX(area) {
+function positionX(area){
   markX.style.display = 'block';
-  markX.style.top = pct(area.top);
-  markX.style.left = pct(area.left);
-  markX.style.width = pct(area.width);
-  markX.style.height = pct(area.height);
+  markX.style.top    = area.top + '%';
+  markX.style.left   = area.left + '%';
+  markX.style.width  = area.width + '%';
+  markX.style.height = area.height + '%';
 }
 
-/* Envío al WebApp + feedback */
-async function handleSelect(area) {
+/** Aplica expansión/offset a un bounding box (en %) centrado en (cx, cy) */
+function expandBox(box, imgW, imgH){
+  // box: {left%, top%, width%, height%} relativo a tamaño natural
+  const cx = box.left + box.width/2;
+  const cy = box.top  + box.height/2;
+
+  const newW = box.width  * expand.scaleX;
+  const newH = box.height * expand.scaleY;
+
+  let left = cx - newW/2 + expand.offX;
+  let top  = cy - newH/2 + expand.offY;
+
+  left = clamp(left, 0, 100);
+  top  = clamp(top,  0, 100);
+  const maxW = 100 - left;
+  const maxH = 100 - top;
+
+  return {
+    left,
+    top,
+    width:  Math.min(newW, maxW),
+    height: Math.min(newH, maxH)
+  };
+}
+
+/** ==============================
+ * DETECCIÓN DE ROSTROS
+ * ============================== */
+async function detectFaces(){
+  // Verifica soporte
+  if (!('FaceDetector' in window)) {
+    detectInfo.textContent = 'FaceDetector no disponible. Usa modo manual.';
+    showStatus('Tu navegador no soporta FaceDetector. Usa “Añadir zona” o el modo ayuda.', 'warn');
+    return 0;
+  }
+
+  try {
+    await baseImg.decode(); // asegura naturalWidth/Height
+    const natW = baseImg.naturalWidth, natH = baseImg.naturalHeight;
+
+    // Crea un ImageBitmap con el tamaño natural para coordenadas consistentes
+    const bitmap = await createImageBitmap(baseImg);
+    const detector = new FaceDetector({ fastMode: true, maxDetectedFaces: 64 });
+    const faces = await detector.detect(bitmap);
+
+    AREAS.length = 0;
+
+    // Ordena de arriba a abajo, izquierda a derecha para etiquetas estables
+    faces.sort((a,b) => (a.boundingBox.y - b.boundingBox.y) || (a.boundingBox.x - b.boundingBox.x));
+
+    faces.forEach((f, i) => {
+      const bb = f.boundingBox; // en px (respecto al bitmap)
+      // pasa a porcentajes respecto al tamaño natural
+      const leftPct   = pct(bb.x,      natW);
+      const topPct    = pct(bb.y,      natH);
+      const widthPct  = pct(bb.width,  natW);
+      const heightPct = pct(bb.height, natH);
+
+      // Expande y ajusta la zona alrededor del rostro
+      const expanded = expandBox({ left: leftPct, top: topPct, width: widthPct, height: heightPct }, natW, natH);
+
+      AREAS.push({
+        id: `opt-${i+1}`,
+        label: `Opción ${i+1}`,
+        ...expanded
+      });
+    });
+
+    drawSpots();
+    detectInfo.textContent = `Detectó ${AREAS.length} áreas`;
+    showStatus('Detección completada. Ajusta con el panel si lo necesitas (tecla H).', 'ok');
+    return AREAS.length;
+
+  } catch (err) {
+    console.error(err);
+    detectInfo.textContent = 'Error en la detección';
+    showStatus('Ocurrió un error durante la detección. Puedes calibrar manualmente.', 'error');
+    return 0;
+  }
+}
+
+/** ==============================
+ * ENVÍO DEL VOTO
+ * ============================== */
+async function handleSelect(area){
   positionX(area);
   sessionStorage.setItem('selectedAreaId', area.id);
 
@@ -235,29 +357,65 @@ async function handleSelect(area) {
   }
 }
 
-function showStatus(msg, kind) {
-  statusEl.textContent = msg;
-  statusEl.className = 'status ' + (kind || '');
-}
+/** ==============================
+ * INTERACCIÓN / UI
+ * ============================== */
+detectBtn.addEventListener('click', detectFaces);
 
-/* Atajos: H = ayuda (contornos), G = rejilla */
-document.addEventListener('keydown', (e) => {
-  const k = e.key.toLowerCase();
-  if (k === 'h') {
-    HELP_MODE = !HELP_MODE;
-    drawSpots();
-    showStatus(HELP_MODE ? 'Modo ayuda ON (bordes visibles)' : 'Modo ayuda OFF', 'warn');
-  }
-  if (k === 'g') {
-    GRID_MODE = !GRID_MODE;
-    gridEl.classList.toggle('on', GRID_MODE);
-    showStatus(GRID_MODE ? 'Rejilla ON' : 'Rejilla OFF', 'warn');
-  }
+addBtn.addEventListener('click', () => {
+  // Crea una zona de ejemplo para mover/ajustar
+  const idx = AREAS.length + 1;
+  AREAS.push({ id: `opt-${idx}`, label: `Opción ${idx}`, top: 40, left: 40, width: 20, height: 15 });
+  drawSpots();
+  showStatus('Zona manual añadida. Presiona H para ver contornos y ajusta en el código si deseas.', 'warn');
 });
 
-// Inicializa
-drawSpots();
-showStatus('Listo. Ajusta zonas con H y G si hace falta.', 'warn');
+helpBtn.addEventListener('click', () => {
+  HELP_MODE = !HELP_MODE;
+  document.getElementById('calPanel').classList.toggle('on', HELP_MODE);
+  drawSpots();
+});
+
+gridBtn.addEventListener('click', () => {
+  GRID_MODE = !GRID_MODE;
+  gridEl.classList.toggle('on', GRID_MODE);
+});
+
+/* Teclas rápidas */
+document.addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === 'h') { HELP_MODE = !HELP_MODE; document.getElementById('calPanel').classList.toggle('on', HELP_MODE); drawSpots(); }
+  if (k === 'g') { GRID_MODE = !GRID_MODE; gridEl.classList.toggle('on', GRID_MODE); }
+});
+
+/* Panel de calibración: sliders → re-aplicar expansión */
+function updateExpand(){
+  expand.scaleX = parseFloat(scaleXInp.value);
+  expand.scaleY = parseFloat(scaleYInp.value);
+  expand.offX   = parseFloat(offXInp.value);
+  expand.offY   = parseFloat(offYInp.value);
+  valScaleX.textContent = expand.scaleX.toFixed(2) + '×';
+  valScaleY.textContent = expand.scaleY.toFixed(2) + '×';
+  valOffX.textContent   = expand.offX.toFixed(1) + '%';
+  valOffY.textContent   = expand.offY.toFixed(1) + '%';
+
+  // Recalcula zonas actuales a partir de su "origen rostro" si lo tuviéramos.
+  // En esta versión, vuelve a detectar para recalcular con nuevos parámetros.
+  detectFaces();
+}
+scaleXInp.addEventListener('input', updateExpand);
+scaleYInp.addEventListener('input', updateExpand);
+offXInp.addEventListener('input', updateExpand);
+offYInp.addEventListener('input', updateExpand);
+
+/* Inicialización: intenta detectar automáticamente al cargar */
+window.addEventListener('load', async () => {
+  const n = await detectFaces();
+  if (n === 0) {
+    showStatus('No se detectaron áreas automáticamente. Usa “Añadir zona” y/o el panel de ayuda (H).', 'warn');
+  }
+});
 </script>
 </body>
 </html>
+``
