@@ -137,3 +137,79 @@ body{
 
 /* Toast discreto */
 #__toast { /* los estilos base los define JS; aquí puedes sobreescribir si deseas */ }
+
+/* ===== Banner contenido (no corrido) ===== */
+.banner {
+  background: linear-gradient(90deg, #0b5fff, #1a73e8);
+  color: #fff;
+  border: 0;
+  border-radius: 0;
+}
+
+/* El banner usa el mismo ancho que el resto gracias a .container */
+.banner .container {
+  /* asegura que coincida con tu contenedor principal */
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* Contenido interno con respiración compacta en móvil */
+.banner__content {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+/* Título responsivo y de alto contraste */
+.banner__title {
+  margin: 0 0 4px 0;
+  font-size: clamp(1.2rem, 3.8vw, 1.7rem);
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+}
+
+/* Subtítulo fluido, sin cortes extraños */
+.banner__subtitle {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .45rem .6rem;          /* espacio entre fragmentos */
+  font-size: clamp(.9rem, 3vw, 1rem);
+  line-height: 1.35;
+  opacity: .95;
+}
+
+/* Cada fragmento (Regla / Nota) se comporta como unidad lógica */
+.banner__subtitle .item {
+  display: inline-flex;
+  gap: .35rem;
+  white-space: normal;        /* permite saltos naturales */
+  word-break: normal;         /* evita quiebres feos */
+}
+
+/* Separador “·” visual (no impide saltos, ni se “pega” a bordes) */
+.banner__subtitle .sep {
+  opacity: .9;
+}
+
+/* Ajustes finos de tipografía en pantallas muy pequeñas */
+@media (max-width: 380px) {
+  .banner__title { letter-spacing: 0; }
+  .banner__subtitle { gap: .35rem .5rem; }
+}
+
+/* (Opcional) si quieres fijar el banner al hacer scroll, añade esta clase: .banner--sticky */
+.banner--sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* ===== Tarjeta de aviso: evitar que “empuje” el layout en móvil ===== */
+.notice {
+  word-break: normal;
+  overflow-wrap: anywhere;     /* permite corte seguro si hiciera falta */
+}
+.badge { white-space: nowrap; } /* evita que el chip se parta */
