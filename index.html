@@ -154,8 +154,8 @@
         tile.className='tile'; tile.setAttribute('role','radio'); tile.setAttribute('aria-checked','false');
         tile.setAttribute('tabindex', (gidx===0&&idx===0)?'0':'-1'); tile.dataset.slug=slug;
         tile.innerHTML = `
-          <img class="photo" loading="lazy" src="${c.photo}" alt="Foto de ${c.name}">
-          <div class="logo-wrap"><img class="logo" loading="lazy" src="${c.logo}" alt="Logo de ${c.name}"></div>
+          <img class="photo" loading="lazy" src="${c.photo}" alt="Foto de ${c.name}" onerror="this.onerror=null;this.src=\'assets/photo-placeholder.png\';">
+          <div class="logo-wrap"><img class="logo" loading="lazy" src="${c.logo}" alt="Logo de ${c.name}" onerror="this.onerror=null;this.src=\'assets/logo-placeholder.png\';"></div>
           <div class="name">${c.name}</div>
           <div class="xmark">X</div>`;
 
@@ -349,8 +349,8 @@
         tile.setAttribute('tabindex', (gidx===0 && idx===0) ? '0':'-1'); tile.dataset.slug = slug;
 
         tile.innerHTML = `
-          <img class="photo" loading="lazy" src="${c.photo}" alt="Foto de ${c.name}">
-          <div class="logo-wrap"><img class="logo" loading="lazy" src="${c.logo}" alt="Logo de ${c.name}"></div>
+          <img class="photo" loading="lazy" src="${c.photo}" alt="Foto de ${c.name}" onerror="this.onerror=null;this.src=\'assets/photo-placeholder.png\';">
+          <div class="logo-wrap"><img class="logo" loading="lazy" src="${c.logo}" alt="Logo de ${c.name}" onerror="this.onerror=null;this.src=\'assets/logo-placeholder.png\';"></div>
           <div class="name">${c.name}</div>
           <div class="xmark">X</div>`;
 
