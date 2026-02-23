@@ -1,0 +1,107 @@
+/* =========================================================
+   TEMA SUAVE: PIZARRA + PALETA (SIN TOCAR TARJETAS NI FUENTES)
+   Incluye este archivo DESPUÉS de tu style.css
+   ========================================================= */
+
+body.theme-pizarra-soft{
+  /* Fondo pizarra */
+  background: radial-gradient(1200px 700px at 20% 10%, rgba(26, 213, 189, .10), transparent 60%),
+              radial-gradient(900px 600px at 80% 20%, rgba(255, 199, 64, .10), transparent 55%),
+              linear-gradient(180deg, #0b0f14 0%, #0f1822 55%, #0b0f14 100%);
+  color: #eaf2ff; /* texto base */
+}
+
+/* Textura muy sutil tipo pizarra (suave) */
+body.theme-pizarra-soft::before{
+  content:"";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.10) 0 1px, transparent 1px 12px);
+  opacity: .18;
+  mix-blend-mode: overlay;
+  z-index: 0;
+}
+body.theme-pizarra-soft > *{ position: relative; z-index: 1; }
+
+/* Paleta (solo colores, sin tocar tipografías) */
+body.theme-pizarra-soft{
+  --px-teal: #1ad5bd;
+  --px-teal-2: #0fb59f;
+  --px-gold: #ffc740;
+  --px-orange: #ff8a1f;
+  --px-muted: #a8b6c7;
+  --px-white: #eaf2ff;
+}
+
+/* Título principal y encabezados */
+body.theme-pizarra-soft .banner__title{
+  color: var(--px-teal);
+  text-shadow: 0 2px 0 rgba(0,0,0,.45);
+}
+
+/* Encabezados de cada consulta (h2) */
+body.theme-pizarra-soft .consulta h2{
+  color: var(--px-gold);
+}
+
+/* Textos secundarios */
+body.theme-pizarra-soft .subtitle,
+body.theme-pizarra-soft .muted,
+body.theme-pizarra-soft .actions__hint,
+body.theme-pizarra-soft .footer{
+  color: var(--px-muted);
+}
+
+/* Nota amarilla: solo ajustar color del texto (sin cambiar caja) */
+body.theme-pizarra-soft .note__text{
+  color: #fff3c7;
+}
+body.theme-pizarra-soft .note__text strong{
+  color: var(--px-gold);
+}
+
+/* Botón: solo color (sin cambiar forma ni fuente) */
+body.theme-pizarra-soft .btn{
+  background: linear-gradient(180deg, var(--px-gold), var(--px-orange));
+  border-color: rgba(0,0,0,.35);
+  color: #1b1400;
+}
+body.theme-pizarra-soft .btn:disabled{
+  background: rgba(255,255,255,.10);
+  color: rgba(234,242,255,.60);
+}
+
+/* Panel: solo color de textos */
+body.theme-pizarra-soft .panel__title{
+  color: var(--px-teal);
+}
+body.theme-pizarra-soft .panel__text{
+  color: var(--px-white);
+}
+body.theme-pizarra-soft .kpi__value{
+  color: var(--px-gold);
+}
+
+/* Tabla: mejorar contraste SOLO con color de textos */
+body.theme-pizarra-soft .table thead th{
+  color: var(--px-white);
+}
+body.theme-pizarra-soft .table td{
+  color: var(--px-white);
+}
+
+/* Barras de porcentaje: colores de la paleta */
+body.theme-pizarra-soft .meter__bar{
+  background: linear-gradient(90deg, var(--px-teal), var(--px-teal-2));
+}
+body.theme-pizarra-soft .meter__bar--null{
+  background: linear-gradient(90deg, #ff4b4b, var(--px-orange));
+}
+
+/* “VOTOS NULOS”: mantener sutil (solo texto) */
+body.theme-pizarra-soft .row-null td{
+  color: #ffd7d7;
+}
