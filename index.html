@@ -1,385 +1,165 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Simulacro de Consultas - Bloques + Conteo</title>
+<title>Tarjetón Interactivo – Ejercicio Pedagógico</title>
 <style>
   :root {
-    --spot-color: rgba(0, 128, 255, 0.18);
-    --spot-border: rgba(0, 128, 255, 0.9);
-    --ok: #0a7f2e; --warn: #b76b00; --error: #b00020;
-    --grid: rgba(255,255,255,.08);
+    --bg: #f7f7f8;
+    --card: #ffffff;
+    --accent: #0b5fff;
+    --accent-2: #1a73e8;
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --xcolor: #d32f2f;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
-         background: #111827; color: #e5e7eb; display: grid; place-items: start center;
-         padding: 16px; gap: 16px; }
-  header, .card { width: min(900px, 100%); }
-  .card { background: #0b1220; border: 1px solid #1f2937; border-radius: 12px;
-          box-shadow: 0 10px 30px rgba(0,0,0,.35); padding: 14px; }
-  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-  .toolbar button { padding: 6px 10px; border: 1px solid #1f2937; background: #0f1a33; color: #e5e7eb;
-                    border-radius: 8px; cursor: pointer; }
-  .toolbar button:hover { background: #132040; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji';
+    background: var(--bg); color: var(--text);
+  }
+  header {
+    padding: 24px 16px; text-align: center; background: linear-gradient(90deg, var(--accent), var(--accent-2)); color: white;
+  }
+  header h1 { margin: 0 0 6px; font-size: 1.6rem; }
+  header p { margin: 0; opacity: .95; }
 
-  .ballot { position: relative; width: 100%; aspect-ratio: 872 / 1112;
-            background: #0a0f1c; border-radius: 10px; overflow: hidden; border: 1px solid #1f2937; }
-  .ballot img.base { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
-                     z-index: 1; user-select: none; -webkit-user-drag: none; pointer-events: none; }
-  .grid { position: absolute; inset: 0; z-index: 2; pointer-events: none; display: none;
-          background-image:
-            linear-gradient(to right, var(--grid) 1px, transparent 1px),
-            linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-          background-size: calc(100%/6) 100%, 100% calc(100%/8); }
-  .grid.on { display: block; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+  .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .btn { border: 1px solid var(--border); background: var(--card); padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: transparent; color: white; }
 
-  /* Marcador X (usa tu X.png) */
-  #markX { position: absolute; z-index: 3; display: none; pointer-events: none; }
-  #markX img { position: absolute; inset: 8% 8% 8% 8%; width: 84%; height: 84%; object-fit: contain;
-               filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); opacity: 0.98; pointer-events: none; }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  .tile {
+    position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; min-height: 120px; display: flex; align-items: center; justify-content: center; text-align: center;
+    transition: box-shadow .15s ease, transform .06s ease;
+  }
+  .tile:hover { box-shadow: 0 6px 18px rgba(0,0,0,.06); transform: translateY(-1px); }
+  .name { font-weight: 700; line-height: 1.25; }
+  .muted { color: var(--muted); font-size: .9rem; }
 
-  /* Zonas clicables */
-  .hotspot { position: absolute; z-index: 4; cursor: pointer; background: transparent; border: none; outline: none; }
-  .hotspot.help::after { content: attr(data-label); position: absolute; inset: 0; border: 2px dashed var(--spot-border);
-                         background: var(--spot-color); color: #fff; font-weight: 600; font-size: 12px;
-                         display: grid; place-items: center; text-shadow: 0 1px 2px #000; border-radius: 6px; }
+  .xmark {
+    position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+    font-weight: 900; font-size: 68px; color: var(--xcolor); opacity: 0; transition: opacity .15s ease;
+  }
+  .tile.selected .xmark { opacity: .9; }
 
-  /* Panel de calibración (H) */
-  #calPanel { display: none; margin-top: 10px; padding: 10px; border: 1px dashed #1f2937; border-radius: 8px; background: #0c1426; }
-  #calPanel.on { display: block; }
-  #calPanel .row { display: grid; grid-template-columns: 220px 1fr 70px; gap: 10px; align-items: center; margin-bottom: 8px; }
-  #calPanel input[type="range"] { width: 100%; }
-  #calPanel code { color: #cbd5e1; }
+  footer { text-align: center; padding: 16px; color: var(--muted); }
 
-  .status { margin-top: 10px; font-size: 14px; min-height: 22px; }
-  .status.ok { color: var(--ok); } .status.warn { color: var(--warn); } .status.error { color: var(--error); }
-  details.summary-card { margin-top: 14px; border-top: 1px dashed #1f2937; padding-top: 12px; }
-  details > summary { cursor: pointer; list-style: none; font-weight: 700; }
-  details > summary::-webkit-details-marker { display: none; }
+  .legend {
+    display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .95rem;
+  }
+  .legend .box { width: 18px; height: 18px; border: 1px solid var(--border); border-radius: 4px; position: relative;}
+  .legend .box::after { content: "X"; position: absolute; inset: -2px 0 0 1px; text-align: center; color: var(--xcolor); opacity: .85; font-weight: 900;}
+
+  .notice { background: #fff6e5; border: 1px solid #f5d7a1; color: #7a5a1b; padding: 10px 12px; border-radius: 8px; margin: 12px 0 18px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 </style>
 </head>
 <body>
   <header>
-    <h1>Simulacro de Consultas</h1>
-    <p>Autocalibra zonas, nómbralas por bloque y marca con tu “X”. Envío a Sheets incluido. Atajos: <b>H</b> (panel) y <b>G</b> (rejilla).</p>
+    <h1>Tarjetón Interactivo</h1>
+    <p>Ejercicio pedagógico: toca o haz clic en un candidato para marcarlo con una <strong>X</strong>.</p>
   </header>
-
-  <section class="card">
-    <div class="toolbar">
-      <button id="btnAuto">Autocalibrar zonas</button>
-      <button id="btnToggleHelp">Ver/ocultar ayuda (H)</button>
-      <button id="btnToggleGrid">Ver/ocultar rejilla (G)</button>
-      <span id="autoInfo"></span>
+  <div class="container">
+    <div class="notice">Este recurso es solo para fines educativos. No es un tarjetón oficial ni registra datos personales.</div>
+    <div class="controls">
+      <button class="btn primary" id="btnLimpiar">Limpiar marcas</button>
+      <button class="btn" id="btnAlternar">Permitir múltiples selecciones</button>
+      <span class="legend"><span class="box"></span> Seleccionado</span>
+      <span class="muted" id="modo" aria-live="polite">Modo: selección única</span>
     </div>
 
-    <div id="ballot" class="ballot" aria-label="Tarjetón interactivo">
-      <img id="baseImg" class="base" src="Consultas.png" alt="Tarjetón" />
-      <div id="grid" class="grid" aria-hidden="true"></div>
-      <div id="markX" aria-hidden="true"><img src="X.png" alt="" /></div>
-      <!-- Zonas se inyectan por JS -->
+    <div class="grid" id="grid">
+      <!-- Tiles will be injected here -->
     </div>
 
-    <div id="status" class="status" role="status" aria-live="polite"></div>
-
-    <!-- Panel de calibración -->
-    <div id="calPanel">
-      <div class="row">
-        <label>Límite superior de bloque 2 (%)</label>
-        <input id="divTop" type="range" min="10" max="40" step="0.5" value="22" />
-        <code id="valDivTop">22%</code>
-      </div>
-      <div class="row">
-        <label>Límite superior de bloque 3 (%)</label>
-        <input id="divMid" type="range" min="55" max="85" step="0.5" value="66" />
-        <code id="valDivMid">66%</code>
-      </div>
-      <div class="row">
-        <label>Escala horizontal de zona</label>
-        <input id="scaleX" type="range" min="1.0" max="3.0" step="0.05" value="1.80" />
-        <code id="valScaleX">1.80×</code>
-      </div>
-      <div class="row">
-        <label>Escala vertical de zona</label>
-        <input id="scaleY" type="range" min="1.0" max="3.0" step="0.05" value="2.10" />
-        <code id="valScaleY">2.10×</code>
-      </div>
-      <div class="row">
-        <label>Offset X (desplazamiento %)</label>
-        <input id="offX" type="range" min="-10" max="10" step="0.5" value="0" />
-        <code id="valOffX">0%</code>
-      </div>
-      <div class="row">
-        <label>Offset Y (desplazamiento %)</label>
-        <input id="offY" type="range" min="-15" max="15" step="0.5" value="0" />
-        <code id="valOffY">0%</code>
-      </div>
-    </div>
-
-    <!-- Información pedagógica -->
-    <details class="summary-card" open>
-      <summary>Información pedagógica</summary>
-      <ul>
-        <li><strong>Marca una sola opción en esta tarjeta.</strong> Este simulador es para fines educativos.</li>
-        <li>El objetivo es practicar la ubicación de casillas y la selección correcta.</li>
-        <li>Este simulador no es un sistema oficial de votación; sus resultados no son vinculantes.</li>
-        <li>Privacidad: no se recopilan datos personales; se guarda la opción elegida y metadatos técnicos mínimos para el conteo pedagógico.</li>
-      </ul>
-    </details>
-  </section>
+    <h2>Resumen</h2>
+    <p class="muted">Candidato(s) marcado(s): <span id="resumen">—</span></p>
+  </div>
+  <footer>
+    &copy; 2026 Ejercicio pedagógico.
+  </footer>
 
 <script>
-/** ==============================
- * CONFIG
- * ============================== */
-const WEBAPP_URL =
-  'https://script.google.com/macros/s/AKfycbyJzMK97YU8JDd8W7X9ZyQei3tCuz4u327WKLvmqjtVSvET4f_LwOOSCn5_FyZ_o7hb/exec';
+  const candidates = ["JUAN CARLOS PINZON BUENO", "CLAUDIA NAYIBE LOPEZ HERNANDEZ", "MAURICIO CARDENAS SANTAMARIA", "DAVID ANDRES LUNA SANCHEZ", "EDISON LUCIO TORRES MORENO", "ANIBAL GAVIRIA CORREA", "LEONARDO HUMBERTO HUERTA GUTIERREZ", "VICTORIA EUGENIA DAVILA HOYOS", "ENRIQUE PEÑALOSA LONDOÑO", "ROY LEONARDO BARRERAS MONTEALEGRE", "JUAN MANUEL GALAN PACHON", "JUAN DANIEL OVIEDO ARANGO", "MARTHA VIVIANA BERNAL AMAYA", "DANIEL QUINTERO CALLE", "PALOMA SUSANA VALENCIA LASERNA", "HECTOR ELIAS PINEDA SALAZAR"];
+  const grid = document.getElementById('grid');
+  const resumen = document.getElementById('resumen');
+  const btnLimpiar = document.getElementById('btnLimpiar');
+  const btnAlternar = document.getElementById('btnAlternar');
+  const modo = document.getElementById('modo');
 
-// Límites verticales para clasificar bloques (en % desde la parte superior del tarjetón)
-const dividers = { top: 22, mid: 66 };
+  let multiple = false;
 
-// Escalado y offset de las zonas detectadas (en % relativos)
-const expand = { scaleX: 1.80, scaleY: 2.10, offX: 0.0, offY: 0.0 };
+  function render() {
+    grid.innerHTML = '';
+    candidates.forEach((name, idx) => {
+      const tile = document.createElement('button');
+      tile.className = 'tile';
+      tile.setAttribute('type', 'button');
+      tile.setAttribute('aria-pressed', 'false');
+      tile.dataset.index = idx;
 
-// Mapeo de nombres de bloques (orden visual)
-const BLOCKS = [
-  { key: 'sol',  name: 'Consulta de las soluciones' },
-  { key: 'gran', name: 'La gran consulta por Colombia' },
-  { key: 'vida', name: 'Frente por la vida' }
-];
+      const label = document.createElement('div');
+      label.className = 'name';
+      label.textContent = name;
 
-// Zonas clicables
-const AREAS = [];
+      const x = document.createElement('div');
+      x.className = 'xmark';
+      x.textContent = 'X';
 
-/** ==============================
- * ELEMENTOS
- * ============================== */
-const ballotEl  = document.getElementById('ballot');
-const statusEl  = document.getElementById('status');
-const gridEl    = document.getElementById('grid');
-const markX     = document.getElementById('markX');
-const baseImg   = document.getElementById('baseImg');
-const autoBtn   = document.getElementById('btnAuto');
-const helpBtn   = document.getElementById('btnToggleHelp');
-const gridBtn   = document.getElementById('btnToggleGrid');
-const autoInfo  = document.getElementById('autoInfo');
+      tile.appendChild(label);
+      tile.appendChild(x);
 
-const calPanel  = document.getElementById('calPanel');
-const divTopInp = document.getElementById('divTop');
-const divMidInp = document.getElementById('divMid');
-const valDivTop = document.getElementById('valDivTop');
-const valDivMid = document.getElementById('valDivMid');
+      tile.addEventListener('click', () => toggle(idx, tile));
 
-const scaleXInp = document.getElementById('scaleX');
-const scaleYInp = document.getElementById('scaleY');
-const offXInp   = document.getElementById('offX');
-const offYInp   = document.getElementById('offY');
-const valScaleX = document.getElementById('valScaleX');
-const valScaleY = document.getElementById('valScaleY');
-const valOffX   = document.getElementById('valOffX');
-const valOffY   = document.getElementById('valOffY');
-
-/** ==============================
- * UTILIDADES
- * ============================== */
-let HELP_MODE = false;
-let GRID_MODE = false;
-
-function pct(v,total){ return (v/total)*100; }
-function clamp(n,min,max){ return Math.min(max, Math.max(min, n)); }
-function fmtPct(n){ return (Math.round(n*100)/100).toFixed(2); } // 2 decimales
-
-function showStatus(msg, kind){ statusEl.textContent = msg; statusEl.className = 'status ' + (kind||''); }
-function clearSpots(){ Array.from(ballotEl.querySelectorAll('.hotspot')).forEach(el => el.remove()); }
-
-function assignBlockByTop(topPct){
-  if (topPct < dividers.top) return BLOCKS[0];
-  if (topPct < dividers.mid) return BLOCKS[1];
-  return BLOCKS[2];
-}
-
-function expandBox(box){
-  const cx = box.left + box.width/2;
-  const cy = box.top  + box.height/2;
-  const newW = box.width  * expand.scaleX;
-  const newH = box.height * expand.scaleY;
-  let left = cx - newW/2 + expand.offX;
-  let top  = cy - newH/2 + expand.offY;
-  left = clamp(left, 0, 100);
-  top  = clamp(top,  0, 100);
-  return {
-    left,
-    top,
-    width:  Math.min(newW, 100 - left),
-    height: Math.min(newH, 100 - top)
-  };
-}
-
-function drawSpots(){
-  clearSpots();
-  for (const a of AREAS) {
-    const btn = document.createElement('button');
-    btn.className = 'hotspot' + (HELP_MODE ? ' help' : '');
-    btn.style.top    = a.top + '%';
-    btn.style.left   = a.left + '%';
-    btn.style.width  = a.width + '%';
-    btn.style.height = a.height + '%';
-    btn.setAttribute('aria-label', a.label);
-    btn.setAttribute('data-label', a.label);
-    btn.title = `${a.block} · ${a.label}`;
-    btn.addEventListener('click', () => handleSelect(a));
-    ballotEl.appendChild(btn);
-  }
-  const savedId = sessionStorage.getItem('selectedAreaId');
-  if (savedId) {
-    const prev = AREAS.find(x => x.id === savedId);
-    if (prev) positionX(prev);
-  }
-}
-
-function positionX(area){
-  markX.style.display = 'block';
-  markX.style.top    = area.top + '%';
-  markX.style.left   = area.left + '%';
-  markX.style.width  = area.width + '%';
-  markX.style.height = area.height + '%';
-}
-
-/** ==============================
- * AUTOCALIBRACIÓN DE ZONAS
- * ============================== */
-async function autoCalibrate(){
-  // Si el navegador no soporta la API de autocalibración, aborta silencioso
-  if (!('FaceDetector' in window)) {
-    autoInfo.textContent = 'Autocalibración no disponible en este navegador.';
-    showStatus('Tu navegador no soporta autocalibración; ajusta manualmente con el panel (H).', 'warn');
-    return 0;
-  }
-
-  try {
-    await baseImg.decode();
-    const natW = baseImg.naturalWidth, natH = baseImg.naturalHeight;
-
-    const bitmap = await createImageBitmap(baseImg);
-    const detector = new FaceDetector({ fastMode: true, maxDetectedFaces: 64 });
-    const detections = await detector.detect(bitmap);
-
-    // Ordena por fila (arriba→abajo) y por columna (izquierda→derecha)
-    detections.sort((a,b) => (a.boundingBox.y - b.boundingBox.y) || (a.boundingBox.x - b.boundingBox.x));
-
-    // Contadores por bloque para numeración
-    const counters = { sol: 0, gran: 0, vida: 0 };
-
-    AREAS.length = 0;
-
-    for (const d of detections) {
-      const bb = d.boundingBox; // px
-      const leftPct   = pct(bb.x,      natW);
-      const topPct    = pct(bb.y,      natH);
-      const widthPct  = pct(bb.width,  natW);
-      const heightPct = pct(bb.height, natH);
-
-      const expanded = expandBox({ left: leftPct, top: topPct, width: widthPct, height: heightPct });
-      const blockDef = assignBlockByTop(expanded.top);
-
-      // ID/label por bloque
-      let key = blockDef.key;
-      counters[key] += 1;
-      let id, label;
-      if (key === 'sol')  { id = `sol-${counters[key]}`;  label = `Opción ${counters[key]}`; }
-      if (key === 'gran') { id = `gran-${counters[key]}`; label = `Opción ${counters[key]}`; }
-      if (key === 'vida') { id = `vida-${counters[key]}`; label = `Opción ${counters[key]}`; }
-
-      AREAS.push({ id, label, block: blockDef.name, ...expanded });
-    }
-
-    drawSpots();
-    autoInfo.textContent = `Zonas generadas: ${AREAS.length}`;
-    showStatus('Autocalibración completada. Ajusta límites y escala en el panel (H) si lo deseas.', 'ok');
-    return AREAS.length;
-
-  } catch (err) {
-    console.error(err);
-    autoInfo.textContent = 'Error al autocalibrar';
-    showStatus('Ocurrió un error durante la autocalibración. Ajusta con el panel (H).', 'error');
-    return 0;
-  }
-}
-
-/** ==============================
- * ENVÍO A SHEETS
- * ============================== */
-async function handleSelect(area){
-  positionX(area);
-  sessionStorage.setItem('selectedAreaId', area.id);
-
-  const payload = {
-    optionId: area.id,
-    label: area.label,
-    block: area.block, // <<— NOMBRE DEL BLOQUE
-    userAgent: navigator.userAgent,
-    tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  };
-
-  showStatus(`Registrando selección: ${area.block} · ${area.label}…`, 'warn');
-
-  try {
-    const res = await fetch(WEBAPP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      grid.appendChild(tile);
     });
-
-    let ok = false;
-    try { ok = !!(await res.json()).ok; }
-    catch (_) { ok = res.ok || res.status === 0; }
-
-    showStatus(ok ? `✅ ¡Voto registrado! (${area.block} · ${area.label})`
-                  : 'No se pudo confirmar el registro. Intenta de nuevo.',
-               ok ? 'ok' : 'error');
-  } catch (err) {
-    console.error(err);
-    showStatus('Error de red. Revisa tu conexión e inténtalo nuevamente.', 'error');
   }
-}
 
-/** ==============================
- * PANEL / EVENTOS
- * ============================== */
-document.getElementById('btnAuto').addEventListener('click', autoCalibrate);
+  function getSelectedNames() {
+    return Array.from(document.querySelectorAll('.tile.selected .name')).map(n => n.textContent);
+  }
 
-document.getElementById('btnToggleHelp').addEventListener('click', () => {
-  HELP_MODE = !HELP_MODE;
-  calPanel.classList.toggle('on', HELP_MODE);
-  drawSpots();
-});
-document.getElementById('btnToggleGrid').addEventListener('click', () => {
-  GRID_MODE = !GRID_MODE; gridEl.classList.toggle('on', GRID_MODE);
-});
+  function updateResumen() {
+    const names = getSelectedNames();
+    resumen.textContent = names.length ? names.join(', ') : '—';
+  }
 
-// Sliders de panel
-function updateFromPanel(){
-  dividers.top = parseFloat(divTopInp.value);
-  dividers.mid = parseFloat(divMidInp.value);
-  expand.scaleX = parseFloat(scaleXInp.value);
-  expand.scaleY = parseFloat(scaleYInp.value);
-  expand.offX   = parseFloat(offXInp.value);
-  expand.offY   = parseFloat(offYInp.value);
+  function toggle(idx, tile) {
+    if (!multiple) {
+      document.querySelectorAll('.tile.selected').forEach(el => {
+        el.classList.remove('selected');
+        el.setAttribute('aria-pressed', 'false');
+      });
+    }
+    const isSelected = tile.classList.toggle('selected');
+    tile.setAttribute('aria-pressed', String(isSelected));
+    updateResumen();
+  }
 
-  valDivTop.textContent = `${dividers.top}%`;
-  valDivMid.textContent = `${dividers.mid}%`;
-  valScaleX.textContent = `${expand.scaleX.toFixed(2)}×`;
-  valScaleY.textContent = `${expand.scaleY.toFixed(2)}×`;
-  valOffX.textContent   = `${expand.offX.toFixed(1)}%`;
-  valOffY.textContent   = `${expand.offY.toFixed(1)}%`;
+  btnLimpiar.addEventListener('click', () => {
+    document.querySelectorAll('.tile.selected').forEach(el => {
+      el.classList.remove('selected');
+      el.setAttribute('aria-pressed', 'false');
+    });
+    updateResumen();
+  });
 
-  // Recalcula automáticamente con los nuevos parámetros (si ya hay autocalibración disponible)
-  autoCalibrate();
-}
-[divTopInp, divMidInp, scaleXInp, scaleYInp, offXInp, offYInp].forEach(inp => inp.addEventListener('input', updateFromPanel));
+  btnAlternar.addEventListener('click', () => {
+    multiple = !multiple;
+    btnAlternar.classList.toggle('primary', multiple);
+    modo.textContent = multiple ? 'Modo: selección múltiple' : 'Modo: selección única';
+  });
 
-// Inicial: intenta autocalibrar
-window.addEventListener('load', () => { autoCalibrate(); });
+  render();
 </script>
 </body>
 </html>
