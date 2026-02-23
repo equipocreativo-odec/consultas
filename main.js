@@ -1,16 +1,20 @@
 // Tarjetón interactivo (GitHub Pages)
 // - Renderiza candidatos desde data.json
-// - Permite una sola marca por dispositivo (localStorage)
+// - Permite marcar uno o varios candidatos
+//   * Si se marca MÁS de uno y se confirma el voto, se registra como "VOTOS NULOS"
+// - Un voto por dispositivo (localStorage)
 // - (Opcional) Reporta el voto y consulta métricas en Google Apps Script
 
 // ========= Config =========
 const API_URL = "https://script.google.com/macros/s/AKfycbzrcOa_YqUlAyU9ECe99Bosk_VQttAOmB5l3oLy2dmeL0Cg9gTiHd133pxn0qsKd-MvJA/exec";
 const POLL_INTERVAL_MS = 7000;
+const NULL_LABEL = "VOTOS NULOS"; // clave usada en el backend/metrics
 
 // ========= Estado =========
 let DATA = null;
 let bySlug = {};
-let selectedName = null;
+let selectedSlugs = new Set();
+let selectedName = null; // nombre de candidato (si único) o NULL_LABEL (si nulo)
 let globalTotals = { total: 0, candidates: {} };
 let lastSent = null;
 
@@ -70,6 +74,11 @@ function lockVotingUI(){
     t.classList.add('disabled');
     t.style.pointerEvents = 'none';
   });
+  const btn = document.getElementById('btnVotar');
+  if (btn){
+    btn.disabled = true;
+    btn.textContent = 'Voto registrado';
+  }
 }
 
 function focusTile(el){
@@ -77,6 +86,12 @@ function focusTile(el){
   document.querySelectorAll('.tile').forEach(t => t.setAttribute('tabindex','-1'));
   el.setAttribute('tabindex','0');
   el.focus();
+}
+
+function updateVoteButton(){
+  const btn = document.getElementById('btnVotar');
+  if (!btn) return;
+  btn.disabled = hasVoted() || selectedSlugs.size === 0;
 }
 
 // ========= Carga de datos =========
@@ -118,7 +133,7 @@ function render(){
 
       const tile = document.createElement('div');
       tile.className = 'tile';
-      tile.setAttribute('role', 'radio');
+      tile.setAttribute('role', 'checkbox');
       tile.setAttribute('aria-checked', 'false');
       tile.setAttribute('tabindex', (gidx === 0 && idx === 0) ? '0' : '-1');
       tile.dataset.slug = slug;
@@ -130,7 +145,7 @@ function render(){
         <div class="xmark">X</div>
       `;
 
-      tile.addEventListener('click', () => selectBySlug(slug));
+      tile.addEventListener('click', () => toggleBySlug(slug));
       tile.addEventListener('keydown', (e) => {
         const tiles = [...sec.querySelectorAll('.tile')];
         const i = tiles.indexOf(tile);
@@ -138,7 +153,7 @@ function render(){
 
         if (e.key === 'Enter' || e.key === ' '){
           e.preventDefault();
-          selectBySlug(slug);
+          toggleBySlug(slug);
         } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown'){
           e.preventDefault();
           focusTile(tiles[Math.min(max, i + 1)]);
@@ -156,17 +171,38 @@ function render(){
   });
 
   if (hasVoted()) lockVotingUI();
+  updateVoteButton();
+}
+
+// ========= Selección múltiple =========
+function toggleBySlug(slug){
+  if (hasVoted()){
+    toast('Ya registraste tu participación en este dispositivo.');
+    return;
+  }
+
+  if (selectedSlugs.has(slug)) selectedSlugs.delete(slug);
+  else selectedSlugs.add(slug);
+
+  const el = document.querySelector(`.tile[data-slug="${slug}"]`);
+  if (el){
+    const isOn = selectedSlugs.has(slug);
+    el.classList.toggle('selected', isOn);
+    el.setAttribute('aria-checked', isOn ? 'true' : 'false');
+  }
+
+  updateVoteButton();
 }
 
 // ========= Envío del voto (opcional) =========
-async function enviarRegistro(nombreCandidato, deviceId){
+async function enviarRegistro(valorVoto, deviceId){
   if (!API_URL) return;
   try{
     await fetch(API_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ candidato: nombreCandidato, deviceId })
+      body: JSON.stringify({ candidato: valorVoto, deviceId })
     });
     lastSent = deviceId;
   } catch (_e){
@@ -174,41 +210,45 @@ async function enviarRegistro(nombreCandidato, deviceId){
   }
 }
 
-// ========= Selección única =========
-function selectBySlug(slug){
+// ========= Confirmación del voto =========
+function confirmarVoto(){
   if (hasVoted()){
     toast('Ya registraste tu participación en este dispositivo.');
     return;
   }
 
-  document.querySelectorAll('.tile').forEach(t => {
-    t.classList.remove('selected');
-    t.setAttribute('aria-checked', 'false');
-  });
-
-  const chosen = document.querySelector(`.tile[data-slug="${slug}"]`);
-  if (chosen){
-    chosen.classList.add('selected');
-    chosen.setAttribute('aria-checked', 'true');
+  if (selectedSlugs.size === 0){
+    toast('Marca al menos un candidato para registrar el voto.');
+    return;
   }
 
-  const rec = bySlug[slug];
-  selectedName = rec ? rec.name : null;
-  if (!selectedName) return;
+  // Regla: más de un marcado => VOTOS NULOS
+  let valorVoto = NULL_LABEL;
+  let textoPanel = NULL_LABEL;
+
+  if (selectedSlugs.size === 1){
+    const slug = [...selectedSlugs][0];
+    const rec = bySlug[slug];
+    valorVoto = rec ? rec.name : NULL_LABEL;
+    textoPanel = valorVoto;
+  } else {
+    textoPanel = `${NULL_LABEL} (marcaste ${selectedSlugs.size})`;
+  }
+
+  selectedName = valorVoto;
 
   markVoted();
   lockVotingUI();
-  toast('Tu selección ha sido registrada.');
+  toast('Tu voto ha sido registrado.');
 
   const pv = document.getElementById('panelVoto');
   if (pv) pv.hidden = false;
   const sn = document.getElementById('selNombre');
-  if (sn) sn.textContent = selectedName;
+  if (sn) sn.textContent = textoPanel;
 
   const deviceId = getDeviceId();
-  if (lastSent !== deviceId) enviarRegistro(selectedName, deviceId);
+  if (lastSent !== deviceId) enviarRegistro(valorVoto, deviceId);
 
-  // actualiza KPIs cuando llegue la siguiente ronda de métricas
   updateGlobalUI();
 }
 
@@ -231,22 +271,18 @@ function updateGlobalUI(){
 
   const total = globalTotals.total || 0;
 
-  // KPI total
   const kpiTotal = document.getElementById('kpiTotal');
   if (kpiTotal) kpiTotal.textContent = String(total);
 
-  // KPI candidato seleccionado
   const kpiCandidato = document.getElementById('kpiCandidato');
   const barCandidato = document.getElementById('barCandidato');
-
   if (selectedName && kpiCandidato && barCandidato){
-    const vC = (globalTotals.candidates && globalTotals.candidates[selectedName]) ? globalTotals.candidates[selectedName] : 0;
-    const pC = total > 0 ? Math.round((vC / total) * 100) : 0;
-    kpiCandidato.textContent = pC + '%';
-    barCandidato.style.width = pC + '%';
+    const v = (globalTotals.candidates && globalTotals.candidates[selectedName]) ? globalTotals.candidates[selectedName] : 0;
+    const p = total > 0 ? Math.round((v / total) * 100) : 0;
+    kpiCandidato.textContent = p + '%';
+    barCandidato.style.width = p + '%';
   }
 
-  // Tabla por consulta
   const tablaConsultas = document.getElementById('tablaConsultas');
   if (!tablaConsultas) return;
 
@@ -256,7 +292,9 @@ function updateGlobalUI(){
     return { title: c.title, votos };
   });
 
-  const rows = sumConsulta.map(({ title, votos }) => {
+  const nullVotes = (globalTotals.candidates && globalTotals.candidates[NULL_LABEL]) ? globalTotals.candidates[NULL_LABEL] : 0;
+
+  const rowsConsultas = sumConsulta.map(({ title, votos }) => {
     const pct = total > 0 ? Math.round((votos / total) * 100) : 0;
     return `
       <tr>
@@ -272,14 +310,30 @@ function updateGlobalUI(){
     `;
   }).join('');
 
+  const pctNull = total > 0 ? Math.round((nullVotes / total) * 100) : 0;
+  const rowNull = `
+    <tr class="row-null">
+      <td class="t-left">${NULL_LABEL}</td>
+      <td class="t-right">${nullVotes}</td>
+      <td class="t-right">${pctNull}%</td>
+    </tr>
+    <tr class="row-meter row-null">
+      <td colspan="3">
+        <div class="meter meter--thin"><div class="meter__bar meter__bar--null" style="width:${pctNull}%"></div></div>
+      </td>
+    </tr>
+  `;
+
   const empty = '<tr><td colspan="3" class="muted t-left">Aún no hay votos registrados.</td></tr>';
+
+  const bodyHtml = (rowsConsultas || '') + (total > 0 ? rowNull : '');
 
   tablaConsultas.innerHTML = `
     <table class="table">
       <thead>
-        <tr><th class="t-left">Consulta</th><th class="t-right">Votos</th><th class="t-right">%</th></tr>
+        <tr><th class="t-left">Categoría</th><th class="t-right">Votos</th><th class="t-right">%</th></tr>
       </thead>
-      <tbody>${rows || empty}</tbody>
+      <tbody>${bodyHtml || empty}</tbody>
       ${total > 0 ? `<tfoot><tr class="total"><td class="t-left">Total</td><td class="t-right">${total}</td><td class="t-right">100%</td></tr></tfoot>` : ''}
     </table>
   `;
@@ -292,10 +346,11 @@ async function init(){
     render();
     updateGlobalUI();
 
-    // si ya votó, mostramos el panel (sin nombre) solo cuando haya selección
+    const btn = document.getElementById('btnVotar');
+    if (btn) btn.addEventListener('click', confirmarVoto);
+
     if (hasVoted()) lockVotingUI();
 
-    // métricas
     fetchGlobalTotals();
     setInterval(fetchGlobalTotals, POLL_INTERVAL_MS);
   } catch (e){

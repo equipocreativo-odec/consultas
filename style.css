@@ -38,7 +38,7 @@ body{
 /* Tarjeta */
 .tile{ position:relative; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:12px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; transition: box-shadow .15s ease, transform .06s ease; }
 .tile:hover{ box-shadow:0 6px 18px rgba(0,0,0,.06); transform:translateY(-1px) }
-.tile[role=radio]{ outline:none }
+.tile[role=checkbox]{ outline:none }
 .tile[aria-checked=true]{ box-shadow:0 0 0 3px rgba(11,95,255,.15) }
 
 /* Foto 3:4 */
@@ -58,6 +58,12 @@ body{
 /* Bloqueo visual tras votar */
 .tile.disabled { opacity:.62; }
 .tile.disabled .name { color:#6b7280; }
+
+/* ===== Acciones de votación ===== */
+.actions{ display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; margin:10px 0 2px; }
+.btn{ appearance:none; border:1px solid #0b5fff; background:#0b5fff; color:#fff; font-weight:800; padding:10px 14px; border-radius:12px; cursor:pointer; }
+.btn:disabled{ opacity:.55; cursor:not-allowed; }
+.actions__hint{ color:var(--muted); font-size:.92rem; }
 
 /* ===== Panel ===== */
 .panel{ margin:18px 0; background:#fff; border:1px solid var(--border); border-radius:12px; padding:14px; }
@@ -79,6 +85,10 @@ body{
 .meter--thin{ height:8px }
 .meter__bar{ height:100%; background:linear-gradient(90deg,#3b82f6,#0ea5e9) }
 .muted{ color:#6b7280 }
+
+/* Votos nulos */
+.row-null td{ background:#fff5f5; }
+.meter__bar--null{ background:linear-gradient(90deg,#ef4444,#f97316); }
 
 /* Footer */
 .footer{ text-align:center; padding:16px; color:var(--muted) }
