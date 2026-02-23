@@ -131,3 +131,9 @@ body{
   /* estilos mínimos los setea JS; aquí puedes reforzar tema claro/oscuro si quieres */
 }
 ``
+/* Desactivar tarjetas cuando ya se votó (una vez por dispositivo) */
+.tile.disabled { opacity:.62; }
+.tile.disabled .name { color:#6b7280; }
+
+/* Toast discreto */
+#__toast { /* los estilos base los define JS; aquí puedes sobreescribir si deseas */ }
