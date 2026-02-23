@@ -281,3 +281,51 @@ body{
   .note__content { gap: 8px 10px; }
   .note__badge { font-size: .78rem; }
 }
+
+/* ===== Resultados por consulta (solo % global) ===== */
+.results { margin: 22px 0; }
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.table th, .table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: .95rem;
+}
+.table thead th {
+  background: #f8fafc; color: #374151; font-weight: 700;
+}
+.table tfoot .total td {
+  font-weight: 800; background: #fbfbfd;
+}
+.t-left { text-align: left; }
+.t-right { text-align: right; }
+
+/* Fila con barra de porcentaje */
+.row-meter td { padding: 6px 12px; }
+.meter {
+  height: 10px;
+  background: #eef2ff;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #dde3fd;
+  margin-top: 6px;
+}
+.meter--thin { height: 8px; }
+.meter__bar {
+  height: 100%;
+  background: linear-gradient(90deg,#3b82f6,#0ea5e9);
+}
+
+/* (Opcional) tipografia secundaria */
+.muted { color: #6b7280; }
+
+/* Estados de tarjetas bloqueadas (si ya votó el dispositivo) */
+.tile.disabled { opacity: .62; }
+.tile.disabled .name { color: #6b7280; }
