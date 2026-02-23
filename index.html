@@ -35,7 +35,7 @@
     <!-- Resultados por consulta (SIEMPRE visibles, SOLO %) -->
     <section class="results">
       <h3>Resultados globales por consulta (en tiempo real)</h3>
-      <p class="muted">Los porcentajes corresponden a la proporción de votos globales de cada consulta.</p>
+      <p class="muted">Los porcentajes corresponden a la proporción de votos globales de cada consulta. También verás los dos candidatos más votados de cada consulta (porcentaje sobre el total global).</p>
       <div id="tablaConsultas"></div>
     </section>
   </main>
@@ -142,7 +142,7 @@
     if (name && lastSent !== deviceId) enviarRegistro(name, deviceId);
   }
 
-  /* ========= Resultados globales SOLO % por consulta ========= */
+  /* ========= Resultados globales: % por consulta + Top 2 candidatos (global %) ========= */
   const tablaConsultas = document.getElementById('tablaConsultas');
 
   async function fetchGlobalTotals(){
@@ -159,17 +159,38 @@
 
     const rowsHtml = DATA.consultas.map(c => {
       const names = c.candidates.map(s => bySlug[s]?.name).filter(Boolean);
+      // Votos de la consulta
       const votosConsulta = names.reduce((acc,n)=> acc + (globalTotals.candidates[n] || 0), 0);
-      const pct = total>0 ? Math.round((votosConsulta/total)*100) : 0;
+      const pctConsulta = total>0 ? Math.round((votosConsulta/total)*100) : 0;
+
+      // Top 2 candidatos de la consulta (por votos absolutos) y su % sobre total global
+      const arr = names.map(n => ({ name:n, v:(globalTotals.candidates[n]||0) }))
+                       .sort((a,b)=> b.v - a.v);
+      const top1 = arr[0] && arr[0].v>0 ? arr[0] : null;
+      const top2 = arr[1] && arr[1].v>0 ? arr[1] : null;
+      const top1Pct = top1 ? Math.round((top1.v/total)*100) : 0;
+      const top2Pct = top2 ? Math.round((top2.v/total)*100) : 0;
+
+      const topHtml = (top1||top2) ? `
+        <div class="top2">
+          <span class="label">Candidatos más votados:</span>
+          ${ top1 ? `<span class="pill">${top1.name} <span class="pct">${top1Pct}%</span></span>` : '' }
+          ${ top2 ? `<span class="pill">${top2.name} <span class="pct">${top2Pct}%</span></span>` : '' }
+        </div>` : `
+        <div class="top2"><span class="label">Candidatos más votados:</span><span class="pill">—</span></div>`;
+
       return `
         <tr>
           <td class="t-left">${c.title}</td>
-          <td class="t-right">${pct}%</td>
+          <td class="t-right">${pctConsulta}%</td>
         </tr>
         <tr class="row-meter">
           <td colspan="2">
-            <div class="meter meter--thin"><div class="meter__bar" style="width:${pct}%"></div></div>
+            <div class="meter meter--thin"><div class="meter__bar" style="width:${pctConsulta}%"></div></div>
           </td>
+        </tr>
+        <tr class="row-sub">
+          <td colspan="2">${topHtml}</td>
         </tr>`;
     }).join('');
 
