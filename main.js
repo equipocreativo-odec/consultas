@@ -8,7 +8,7 @@
 // ========= Config =========
 const API_URL = "https://script.google.com/macros/s/AKfycbzrcOa_YqUlAyU9ECe99Bosk_VQttAOmB5l3oLy2dmeL0Cg9gTiHd133pxn0qsKd-MvJA/exec";
 const POLL_INTERVAL_MS = 7000;
-const NULL_LABEL = "VOTOS NULOS"; // clave usada en el backend/metrics
+const NULL_LABEL = "VOTOS NULOS";
 
 // ========= Estado =========
 let DATA = null;
@@ -18,7 +18,7 @@ let selectedName = null; // nombre de candidato (si único) o NULL_LABEL (si nul
 let globalTotals = { total: 0, candidates: {} };
 let lastSent = null;
 
-// ========= Utilidades (un voto por dispositivo) =========
+// ========= Un voto por dispositivo =========
 const KEYS = {
   deviceId: 'consulta_device_id_8m',
   hasVoted: 'consulta_has_voted_8m'
@@ -54,7 +54,7 @@ function markVoted(){
   localStorage.setItem(KEYS.hasVoted, 'true');
 }
 
-// ========= UI helpers =========
+// ========= UI =========
 function toast(msg){
   let el = document.getElementById('__toast');
   if (!el){
@@ -94,7 +94,7 @@ function updateVoteButton(){
   btn.disabled = hasVoted() || selectedSlugs.size === 0;
 }
 
-// ========= Carga de datos =========
+// ========= Datos =========
 async function loadData(){
   const res = await fetch('data.json', { cache: 'no-store' });
   if (!res.ok) throw new Error('No se pudo cargar data.json (' + res.status + ')');
@@ -134,7 +134,7 @@ function render(){
       const tile = document.createElement('div');
       tile.className = 'tile';
       tile.setAttribute('role', 'checkbox');
-      tile.setAttribute('aria-checked', 'false');
+      tile.setAttribute('aria-checked', selectedSlugs.has(slug) ? 'true' : 'false');
       tile.setAttribute('tabindex', (gidx === 0 && idx === 0) ? '0' : '-1');
       tile.dataset.slug = slug;
 
@@ -145,19 +145,21 @@ function render(){
         <div class="xmark">X</div>
       `;
 
+      if (selectedSlugs.has(slug)) tile.classList.add('selected');
+
       tile.addEventListener('click', () => toggleBySlug(slug));
       tile.addEventListener('keydown', (e) => {
         const tiles = [...sec.querySelectorAll('.tile')];
         const i = tiles.indexOf(tile);
         const max = tiles.length - 1;
 
-        if (e.key === 'Enter' || e.key === ' '){
+        if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           toggleBySlug(slug);
-        } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown'){
+        } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
           e.preventDefault();
           focusTile(tiles[Math.min(max, i + 1)]);
-        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp'){
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
           e.preventDefault();
           focusTile(tiles[Math.max(0, i - 1)]);
         }
@@ -174,7 +176,6 @@ function render(){
   updateVoteButton();
 }
 
-// ========= Selección múltiple =========
 function toggleBySlug(slug){
   if (hasVoted()){
     toast('Ya registraste tu participación en este dispositivo.');
@@ -186,17 +187,16 @@ function toggleBySlug(slug){
 
   const el = document.querySelector(`.tile[data-slug="${slug}"]`);
   if (el){
-    const isOn = selectedSlugs.has(slug);
-    el.classList.toggle('selected', isOn);
-    el.setAttribute('aria-checked', isOn ? 'true' : 'false');
+    const on = selectedSlugs.has(slug);
+    el.classList.toggle('selected', on);
+    el.setAttribute('aria-checked', on ? 'true' : 'false');
   }
 
   updateVoteButton();
 }
 
-// ========= Envío del voto (opcional) =========
+// ========= Envío =========
 async function enviarRegistro(valorVoto, deviceId){
-  if (!API_URL) return;
   try{
     await fetch(API_URL, {
       method: 'POST',
@@ -206,11 +206,10 @@ async function enviarRegistro(valorVoto, deviceId){
     });
     lastSent = deviceId;
   } catch (_e){
-    // intencional: silencioso
+    // silencioso
   }
 }
 
-// ========= Confirmación del voto =========
 function confirmarVoto(){
   if (hasVoted()){
     toast('Ya registraste tu participación en este dispositivo.');
@@ -222,7 +221,6 @@ function confirmarVoto(){
     return;
   }
 
-  // Regla: más de un marcado => VOTOS NULOS
   let valorVoto = NULL_LABEL;
   let textoPanel = NULL_LABEL;
 
@@ -236,7 +234,6 @@ function confirmarVoto(){
   }
 
   selectedName = valorVoto;
-
   markVoted();
   lockVotingUI();
   toast('Tu voto ha sido registrado.');
@@ -252,9 +249,8 @@ function confirmarVoto(){
   updateGlobalUI();
 }
 
-// ========= Métricas globales =========
+// ========= Métricas =========
 async function fetchGlobalTotals(){
-  if (!API_URL) return;
   try{
     const res = await fetch(API_URL + '?metrics=1', { cache: 'no-store' });
     const data = await res.json();
@@ -271,9 +267,11 @@ function updateGlobalUI(){
 
   const total = globalTotals.total || 0;
 
+  // KPI total
   const kpiTotal = document.getElementById('kpiTotal');
   if (kpiTotal) kpiTotal.textContent = String(total);
 
+  // KPI voto seleccionado
   const kpiCandidato = document.getElementById('kpiCandidato');
   const barCandidato = document.getElementById('barCandidato');
   if (selectedName && kpiCandidato && barCandidato){
@@ -283,6 +281,7 @@ function updateGlobalUI(){
     barCandidato.style.width = p + '%';
   }
 
+  // Tabla por consulta + votos nulos (SIEMPRE visible)
   const tablaConsultas = document.getElementById('tablaConsultas');
   if (!tablaConsultas) return;
 
@@ -324,16 +323,14 @@ function updateGlobalUI(){
     </tr>
   `;
 
-  const empty = '<tr><td colspan="3" class="muted t-left">Aún no hay votos registrados.</td></tr>';
-
-  const bodyHtml = (rowsConsultas || '') + (total > 0 ? rowNull : '');
+  const bodyHtml = (rowsConsultas || '') + rowNull;
 
   tablaConsultas.innerHTML = `
     <table class="table">
       <thead>
         <tr><th class="t-left">Categoría</th><th class="t-right">Votos</th><th class="t-right">%</th></tr>
       </thead>
-      <tbody>${bodyHtml || empty}</tbody>
+      <tbody>${bodyHtml}</tbody>
       ${total > 0 ? `<tfoot><tr class="total"><td class="t-left">Total</td><td class="t-right">${total}</td><td class="t-right">100%</td></tr></tfoot>` : ''}
     </table>
   `;
