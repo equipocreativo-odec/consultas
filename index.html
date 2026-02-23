@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Tarjetón por Consultas – Selección única</title>
+<title>Tarjetón por Consultas – Selección única + Google Sheets</title>
 <style>
   :root { --bg:#f7f7f8; --card:#fff; --border:#e5e7eb; --text:#111827; --muted:#6b7280; --accent:#0b5fff; --x:#d32f2f; }
   *{box-sizing:border-box}
@@ -37,15 +36,75 @@
   <p class="sub">Regla de voto válido (Registraduría): <strong>una sola marca</strong> en todo el tarjetón.</p>
 </header>
 <div class="container">
-  <div class="notice">Recurso educativo. Este simulador organiza candidaturas por <em>consulta</em> y permite solo una selección total.</div>
+  <div class="notice">Recurso educativo. Integra envío <strong>automático</strong> de la selección a Google Sheets al hacer clic en un candidato.</div>
   <div id="content"></div>
   <div class="resume">Candidato marcado: <span id="resumen">—</span></div>
 </div>
+
 <script>
-  const DATA = {"records": [{"name": "JUAN CARLOS PINZON BUENO", "slug": "juan-carlos-pinzon-bueno", "photo": "assets/photo-juan-carlos-pinzon-bueno.png", "logo": "assets/logo-juan-carlos-pinzon-bueno.png"}, {"name": "CLAUDIA NAYIBE LOPEZ HERNANDEZ", "slug": "claudia-nayibe-lopez-hernandez", "photo": "assets/photo-claudia-nayibe-lopez-hernandez.png", "logo": "assets/logo-claudia-nayibe-lopez-hernandez.png"}, {"name": "MAURICIO CARDENAS SANTAMARIA", "slug": "mauricio-cardenas-santamaria", "photo": "assets/photo-mauricio-cardenas-santamaria.png", "logo": "assets/logo-mauricio-cardenas-santamaria.png"}, {"name": "DAVID ANDRES LUNA SANCHEZ", "slug": "david-andres-luna-sanchez", "photo": "assets/photo-david-andres-luna-sanchez.png", "logo": "assets/logo-david-andres-luna-sanchez.png"}, {"name": "EDISON LUCIO TORRES MORENO", "slug": "edison-lucio-torres-moreno", "photo": "assets/photo-edison-lucio-torres-moreno.png", "logo": "assets/logo-edison-lucio-torres-moreno.png"}, {"name": "ANIBAL GAVIRIA CORREA", "slug": "anibal-gaviria-correa", "photo": "assets/photo-anibal-gaviria-correa.png", "logo": "assets/logo-anibal-gaviria-correa.png"}, {"name": "LEONARDO HUMBERTO HUERTA GUTIERREZ", "slug": "leonardo-humberto-huerta-gutierrez", "photo": "assets/photo-leonardo-humberto-huerta-gutierrez.png", "logo": "assets/logo-leonardo-humberto-huerta-gutierrez.png"}, {"name": "VICTORIA EUGENIA DAVILA HOYOS", "slug": "victoria-eugenia-davila-hoyos", "photo": "assets/photo-victoria-eugenia-davila-hoyos.png", "logo": "assets/logo-victoria-eugenia-davila-hoyos.png"}, {"name": "ENRIQUE PEÑALOSA LONDOÑO", "slug": "enrique-penalosa-londono", "photo": "assets/photo-enrique-penalosa-londono.png", "logo": "assets/logo-enrique-penalosa-londono.png"}, {"name": "ROY LEONARDO BARRERAS MONTEALEGRE", "slug": "roy-leonardo-barreras-montealegre", "photo": "assets/photo-roy-leonardo-barreras-montealegre.png", "logo": "assets/logo-roy-leonardo-barreras-montealegre.png"}, {"name": "JUAN MANUEL GALAN PACHON", "slug": "juan-manuel-galan-pachon", "photo": "assets/photo-juan-manuel-galan-pachon.png", "logo": "assets/logo-juan-manuel-galan-pachon.png"}, {"name": "JUAN DANIEL OVIEDO ARANGO", "slug": "juan-daniel-oviedo-arango", "photo": "assets/photo-juan-daniel-oviedo-arango.png", "logo": "assets/logo-juan-daniel-oviedo-arango.png"}, {"name": "MARTHA VIVIANA BERNAL AMAYA", "slug": "martha-viviana-bernal-amaya", "photo": "assets/photo-martha-viviana-bernal-amaya.png", "logo": "assets/logo-martha-viviana-bernal-amaya.png"}, {"name": "DANIEL QUINTERO CALLE", "slug": "daniel-quintero-calle", "photo": "assets/photo-daniel-quintero-calle.png", "logo": "assets/logo-daniel-quintero-calle.png"}, {"name": "PALOMA SUSANA VALENCIA LASERNA", "slug": "paloma-susana-valencia-laserna", "photo": "assets/photo-paloma-susana-valencia-laserna.png", "logo": "assets/logo-paloma-susana-valencia-laserna.png"}, {"name": "HECTOR ELIAS PINEDA SALAZAR", "slug": "hector-elias-pineda-salazar", "photo": "assets/photo-hector-elias-pineda-salazar.png", "logo": "assets/logo-hector-elias-pineda-salazar.png"}], "consultas": [{"title": "Consulta de las Soluciones", "subtitle": "Salud, seguridad y educación", "candidates": ["claudia-nayibe-lopez-hernandez", "leonardo-humberto-huerta-gutierrez"]}, {"title": "La Gran Consulta por Colombia", "subtitle": "", "candidates": ["mauricio-cardenas-santamaria", "david-andres-luna-sanchez", "victoria-eugenia-davila-hoyos", "juan-manuel-galan-pachon", "paloma-susana-valencia-laserna", "juan-carlos-pinzon-bueno", "anibal-gaviria-correa", "enrique-penalosa-londono", "juan-daniel-oviedo-arango"]}, {"title": "Consulta del Frente por la Vida", "subtitle": "", "candidates": ["hector-elias-pineda-salazar", "edison-lucio-torres-moreno", "roy-leonardo-barreras-montealegre", "martha-viviana-bernal-amaya", "daniel-quintero-calle"]}]}; // records + consultas
+  /* ====== Datos (candidatos + consultas) ====== */
+  const DATA = {
+    "records": [
+      {"name":"Juan Carlos Pinzon Bueno","slug":"juan-carlos-pinzon-bueno","photo":"assets/photo-juan-carlos-pinzon-bueno.png","logo":"assets/logo-juan-carlos-pinzon-bueno.png"},
+      {"name":"Claudia Nayibe Lopez Hernandez","slug":"claudia-nayibe-lopez-hernandez","photo":"assets/photo-claudia-nayibe-lopez-hernandez.png","logo":"assets/logo-claudia-nayibe-lopez-hernandez.png"},
+      {"name":"Mauricio Cardenas Santamaria","slug":"mauricio-cardenas-santamaria","photo":"assets/photo-mauricio-cardenas-santamaria.png","logo":"assets/logo-mauricio-cardenas-santamaria.png"},
+      {"name":"David Andres Luna Sanchez","slug":"david-andres-luna-sanchez","photo":"assets/photo-david-andres-luna-sanchez.png","logo":"assets/logo-david-andres-luna-sanchez.png"},
+      {"name":"Edison Lucio Torres Moreno","slug":"edison-lucio-torres-moreno","photo":"assets/photo-edison-lucio-torres-moreno.png","logo":"assets/logo-edison-lucio-torres-moreno.png"},
+      {"name":"Anibal Gaviria Correa","slug":"anibal-gaviria-correa","photo":"assets/photo-anibal-gaviria-correa.png","logo":"assets/logo-anibal-gaviria-correa.png"},
+      {"name":"Leonardo Humberto Huerta Gutierrez","slug":"leonardo-humberto-huerta-gutierrez","photo":"assets/photo-leonardo-humberto-huerta-gutierrez.png","logo":"assets/logo-leonardo-humberto-huerta-gutierrez.png"},
+      {"name":"Victoria Eugenia Davila Hoyos","slug":"victoria-eugenia-davila-hoyos","photo":"assets/photo-victoria-eugenia-davila-hoyos.png","logo":"assets/logo-victoria-eugenia-davila-hoyos.png"},
+      {"name":"Enrique Penaloza Londono","slug":"enrique-penalosa-londono","photo":"assets/photo-enrique-penalosa-londono.png","logo":"assets/logo-enrique-penalosa-londono.png"},
+      {"name":"Roy Leonardo Barreras Montealegre","slug":"roy-leonardo-barreras-montealegre","photo":"assets/photo-roy-leonardo-barreras-montealegre.png","logo":"assets/logo-roy-leonardo-barreras-montealegre.png"},
+      {"name":"Juan Manuel Galan Pachon","slug":"juan-manuel-galan-pachon","photo":"assets/photo-juan-manuel-galan-pachon.png","logo":"assets/logo-juan-manuel-galan-pachon.png"},
+      {"name":"Juan Daniel Oviedo Arango","slug":"juan-daniel-oviedo-arango","photo":"assets/photo-juan-daniel-oviedo-arango.png","logo":"assets/logo-juan-daniel-oviedo-arango.png"},
+      {"name":"Martha Viviana Bernal Amaya","slug":"martha-viviana-bernal-amaya","photo":"assets/photo-martha-viviana-bernal-amaya.png","logo":"assets/logo-martha-viviana-bernal-amaya.png"},
+      {"name":"Daniel Quintero Calle","slug":"daniel-quintero-calle","photo":"assets/photo-daniel-quintero-calle.png","logo":"assets/logo-daniel-quintero-calle.png"},
+      {"name":"Paloma Susana Valencia Laserna","slug":"paloma-susana-valencia-laserna","photo":"assets/photo-paloma-susana-valencia-laserna.png","logo":"assets/logo-paloma-susana-valencia-laserna.png"},
+      {"name":"Hector Elias Pineda Salazar","slug":"hector-elias-pineda-salazar","photo":"assets/photo-hector-elias-pineda-salazar.png","logo":"assets/logo-hector-elias-pineda-salazar.png"}
+    ],
+    "consultas": [
+      {
+        "title": "Consulta de las Soluciones",
+        "subtitle": "Salud, seguridad y educación",
+        "candidates": [
+          "claudia-nayibe-lopez-hernandez",
+          "leonardo-humberto-huerta-gutierrez"
+        ]
+      },
+      {
+        "title": "La Gran Consulta por Colombia",
+        "subtitle": "",
+        "candidates": [
+          "mauricio-cardenas-santamaria",
+          "david-andres-luna-sanchez",
+          "victoria-eugenia-davila-hoyos",
+          "juan-manuel-galan-pachon",
+          "paloma-susana-valencia-laserna",
+          "juan-carlos-pinzon-bueno",
+          "anibal-gaviria-correa",
+          "enrique-penalosa-londono",
+          "juan-daniel-oviedo-arango"
+        ]
+      },
+      {
+        "title": "Consulta del Frente por la Vida",
+        "subtitle": "",
+        "candidates": [
+          "hector-elias-pineda-salazar",
+          "edison-lucio-torres-moreno",
+          "roy-leonardo-barreras-montealegre",
+          "martha-viviana-bernal-amaya",
+          "daniel-quintero-calle"
+        ]
+      }
+    ]
+  };
+
+  /* ====== Render ====== */
   const bySlug = Object.fromEntries(DATA.records.map(r => [r.slug, r]));
   const content = document.getElementById('content');
   const resumen = document.getElementById('resumen');
+
   function render(){
     content.innerHTML = '';
     DATA.consultas.forEach((g, gidx) => {
@@ -54,30 +113,70 @@
       const h = document.createElement('h2'); h.textContent = g.title; sec.appendChild(h);
       if (g.subtitle){ const p = document.createElement('p'); p.className = 'subtitle'; p.textContent = g.subtitle; sec.appendChild(p); }
       const grid = document.createElement('div'); grid.className = 'grid';
+
       g.candidates.forEach((slug, idx) => {
         const c = bySlug[slug]; if(!c) return;
         const tile = document.createElement('div');
-        tile.className = 'tile'; tile.setAttribute('role','radio'); tile.setAttribute('aria-checked','false'); tile.setAttribute('tabindex', (gidx===0 && idx===0) ? '0':'-1'); tile.dataset.slug = slug;
+        tile.className = 'tile'; tile.setAttribute('role','radio'); tile.setAttribute('aria-checked','false');
+        tile.setAttribute('tabindex', (gidx===0 && idx===0) ? '0':'-1'); tile.dataset.slug = slug;
         tile.innerHTML = `
           <img class="photo" src="${c.photo}" alt="Foto de ${c.name}">
           <div class="logo-wrap"><img class="logo" src="${c.logo}" alt="Logo de ${c.name}"></div>
           <div class="name">${c.name}</div>
           <div class="xmark">X</div>`;
-        tile.addEventListener('click', () => select(slug));
+
+        tile.addEventListener('click', () => selectBySlug(slug));
         tile.addEventListener('keydown', (e) => {
           const tiles = [...sec.querySelectorAll('.tile')];
           const i = tiles.indexOf(tile); const max = tiles.length - 1;
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(slug); }
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectBySlug(slug); }
           else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); focusTile(tiles[Math.min(max, i+1)]); }
           else if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); focusTile(tiles[Math.max(0, i-1)]); }
         });
+
         grid.appendChild(tile);
       });
+
       sec.appendChild(grid); content.appendChild(sec);
     });
   }
-  function focusTile(el){ if(!el) return; document.querySelectorAll('.tile').forEach(t=>t.setAttribute('tabindex','-1')); el.setAttribute('tabindex','0'); el.focus(); }
-  function select(slug){ document.querySelectorAll('.tile').forEach(t=>{ t.classList.remove('selected'); t.setAttribute('aria-checked','false'); }); const chosen = document.querySelector(`.tile[data-slug="${slug}"]`); if(chosen){ chosen.classList.add('selected'); chosen.setAttribute('aria-checked','true'); } const rec = bySlug[slug]; resumen.textContent = rec ? rec.name : '—'; }
+
+  function focusTile(el){
+    if(!el) return; document.querySelectorAll('.tile').forEach(t=>t.setAttribute('tabindex','-1'));
+    el.setAttribute('tabindex','0'); el.focus();
+  }
+
+  /* ====== Integración con Google Sheets (auto) ====== */
+  const GOOGLE_SHEET_API = "https://script.google.com/macros/s/AKfycbzrcOa_YqUlAyU9ECe99Bosk_VQttAOmB5l3oLy2dmeL0Cg9gTiHd133pxn0qsKd-MvJA/exec";
+  let lastSent = null;
+  async function registrarVotoAutomatico(nombreCandidato){
+    if(!nombreCandidato) return;
+    if(lastSent === nombreCandidato) { /* evitar duplicados inmediatos */ }
+    try{
+      await fetch(GOOGLE_SHEET_API, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidato: nombreCandidato })
+      });
+      lastSent = nombreCandidato;
+      console.log('Voto enviado a Google Sheets:', nombreCandidato);
+    }catch(err){
+      console.warn('No se pudo enviar el voto a Google Sheets en este momento.');
+    }
+  }
+
+  /* ====== Selección única + envío automático ====== */
+  function selectBySlug(slug){
+    document.querySelectorAll('.tile').forEach(t=>{ t.classList.remove('selected'); t.setAttribute('aria-checked','false'); });
+    const chosen = document.querySelector(`.tile[data-slug="${slug}"]`);
+    if(chosen){ chosen.classList.add('selected'); chosen.setAttribute('aria-checked','true'); }
+    const rec = bySlug[slug];
+    const name = rec ? rec.name : null;
+    resumen.textContent = name || '—';
+    registrarVotoAutomatico(name);
+  }
+
   render();
 </script>
 </body>
