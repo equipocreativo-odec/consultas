@@ -1,103 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Tarjetón por Consultas – Selección única + Google Sheets</title>
-<style>
-  :root {
-    --bg:#f7f7f8; --card:#fff; --border:#e5e7eb;
-    --text:#111827; --muted:#6b7280; --accent:#0b5fff; --x:#d32f2f;
-    --radius:12px;
-    --gap:14px;
-    --logo-h:56px;   /* altura del área del logo en móvil */
-    --logo-pad:6px;  /* padding interno del logo */
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,'Noto Sans';background:var(--bg);color:var(--text)}
-  header{padding:18px 16px;background:var(--card);border-bottom:1px solid var(--border)}
-  h1{margin:.2rem 0 0;font-size:1.5rem}
-  .sub{color:var(--muted);margin:.3rem 0 0}
-  .container{max-width:1200px;margin:0 auto;padding:16px}
-  .notice{background:#fff6e5;border:1px solid #f5d7a1;color:#7a5a1b;padding:10px 12px;border-radius:8px;margin:10px 0 18px}
-
-  /* === Grillas responsivas === */
-  .consulta{margin:22px 0}
-  .consulta h2{font-size:1.05rem;margin:0 0 6px}
-  .consulta .subtitle{color:var(--muted);margin:0 0 10px}
-  .grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
-    gap:var(--gap);
-  }
-
-  /* === Tarjeta === */
-  .tile{
-    position:relative;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;
-    transition:box-shadow .15s ease, transform .06s ease;
-  }
-  .tile:hover{box-shadow:0 6px 18px rgba(0,0,0,.06);transform:translateY(-1px)}
-  .tile[role=radio]{outline:none}
-  .tile[aria-checked=true]{box-shadow:0 0 0 3px rgba(11,95,255,.15)}
-
-  /* Foto con proporción 3:4 (vertical) */
-  .photo{
-    width:100%;
-    aspect-ratio:3/4;
-    object-fit:cover;
-    border-radius:10px;
-    border:1px solid var(--border);
-    background:#fafafa;
-  }
-
-  /* Logo centrado en banda de altura fija */
-  .logo-wrap{width:100%}
-  .logo{
-    width:100%;
-    height:var(--logo-h);
-    object-fit:contain;          /* que no se distorsione */
-    object-position:center;
-    background:#fff;
-    border:1px solid var(--border);
-    border-radius:8px;
-    padding:var(--logo-pad);
-  }
-
-  .name{
-    font-weight:700;text-align:center;line-height:1.2;
-    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
-    min-height:2.4em; /* asegura 2 líneas */
-  }
-
-  /* X superpuesta */
-  .xmark{
-    position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;
-    font-weight:900;font-size:86px;color:var(--x);opacity:0;transition:opacity .12s ease
-  }
-  .tile.selected .xmark{opacity:.9}
-
-  .resume{margin-top:12px;color:var(--muted)}
-
-  /* ======= Breakpoints ======= */
-  /* Teléfonos: 2 columnas, compacidad y X más pequeña */
-  @media (max-width: 480px){
-    .grid{ grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; }
-    .tile{ padding:10px; border-radius:10px; }
-    .photo{ border-radius:8px; }
-    .logo{ height:52px; padding:5px; }
-    .name{ font-size:.82rem; }
-    .xmark{ font-size:58px; }
-  }
-
-  /* Tablets chicas: 3 columnas */
-  @media (min-width: 481px) and (max-width: 768px){
-    .grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
-    .logo{ height:58px; }
-  }
-
-  /* Desktop: auto-fill de 240px (definido arriba) */
-</style>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
 <header>
@@ -112,7 +20,6 @@
 </div>
 
 <script>
-  /* ====== Datos (candidatos + consultas) ====== */
   const DATA = {
     "records": [
       {"name":"Claudia Nayibe López Hernández","slug":"claudia-nayibe-lopez-hernandez","photo":"assets/photo-claudia-nayibe-lopez-hernandez.png","logo":"assets/logo-claudia-nayibe-lopez-hernandez.png"},
@@ -133,44 +40,18 @@
       {"name":"Daniel Quintero Calle","slug":"daniel-quintero-calle","photo":"assets/photo-daniel-quintero-calle.png","logo":"assets/logo-daniel-quintero-calle.png"}
     ],
     "consultas": [
-      {
-        "title": "Consulta de las Soluciones",
-        "subtitle": "Salud, seguridad y educación",
-        "candidates": [
-          "claudia-nayibe-lopez-hernandez",
-          "leonardo-humberto-huerta-gutierrez"
-        ]
-      },
-      {
-        "title": "La Gran Consulta por Colombia",
-        "subtitle": "",
-        "candidates": [
-          "mauricio-cardenas-santamaria",
-          "david-andres-luna-sanchez",
-          "victoria-eugenia-davila-hoyos",
-          "juan-manuel-galan-pachon",
-          "paloma-susana-valencia-laserna",
-          "juan-carlos-pinzon-bueno",
-          "anibal-gaviria-correa",
-          "enrique-penalosa-londono",
-          "juan-daniel-oviedo-arango"
-        ]
-      },
-      {
-        "title": "Consulta del Frente por la Vida",
-        "subtitle": "",
-        "candidates": [
-          "hector-elias-pineda-salazar",
-          "edison-lucio-torres-moreno",
-          "roy-leonardo-barreras-montealegre",
-          "martha-viviana-bernal-amaya",
-          "daniel-quintero-calle"
-        ]
-      }
+      {"title":"Consulta de las Soluciones","subtitle":"Salud, seguridad y educación","candidates":[
+        "claudia-nayibe-lopez-hernandez","leonardo-humberto-huerta-gutierrez"
+      ]},
+      {"title":"La Gran Consulta por Colombia","subtitle":"","candidates":[
+        "mauricio-cardenas-santamaria","david-andres-luna-sanchez","victoria-eugenia-davila-hoyos","juan-manuel-galan-pachon","paloma-susana-valencia-laserna","juan-carlos-pinzon-bueno","anibal-gaviria-correa","enrique-penalosa-londono","juan-daniel-oviedo-arango"
+      ]},
+      {"title":"Consulta del Frente por la Vida","subtitle":"","candidates":[
+        "hector-elias-pineda-salazar","edison-lucio-torres-moreno","roy-leonardo-barreras-montealegre","martha-viviana-bernal-amaya","daniel-quintero-calle"
+      ]}
     ]
   };
 
-  /* ====== Render ====== */
   const bySlug = Object.fromEntries(DATA.records.map(r => [r.slug, r]));
   const content = document.getElementById('content');
   const resumen = document.getElementById('resumen');
@@ -190,10 +71,8 @@
         tile.className = 'tile'; tile.setAttribute('role','radio'); tile.setAttribute('aria-checked','false');
         tile.setAttribute('tabindex', (gidx===0 && idx===0) ? '0':'-1'); tile.dataset.slug = slug;
         tile.innerHTML = `
-          <img class="photo" src="${c.photo}" alt="Foto de ${c.name}" loading="lazy">
-          <div class="logo-wrap">
-            <img class="logo" src="${c.logo}" alt="Logo de ${c.name}" loading="lazy">
-          </div>
+          <img class="photo" loading="lazy" src="${c.photo}" alt="Foto de ${c.name}">
+          <div class="logo-wrap"><img class="logo" loading="lazy" src="${c.logo}" alt="Logo de ${c.name}"></div>
           <div class="name">${c.name}</div>
           <div class="xmark">X</div>`;
 
@@ -213,32 +92,24 @@
     });
   }
 
-  function focusTile(el){
-    if(!el) return; document.querySelectorAll('.tile').forEach(t=>t.setAttribute('tabindex','-1'));
-    el.setAttribute('tabindex','0'); el.focus();
-  }
+  function focusTile(el){ if(!el) return; document.querySelectorAll('.tile').forEach(t=>t.setAttribute('tabindex','-1')); el.setAttribute('tabindex','0'); el.focus(); }
 
-  /* ====== Integración con Google Sheets (auto) ====== */
+  // Envío automático a Google Sheets
   const GOOGLE_SHEET_API = "https://script.google.com/macros/s/AKfycbzrcOa_YqUlAyU9ECe99Bosk_VQttAOmB5l3oLy2dmeL0Cg9gTiHd133pxn0qsKd-MvJA/exec";
   let lastSent = null;
   async function registrarVotoAutomatico(nombreCandidato){
     if(!nombreCandidato) return;
-    if(lastSent === nombreCandidato) { /* evitar duplicados inmediatos */ }
+    if(lastSent === nombreCandidato) { /* evita duplicados inmediatos */ }
     try{
       await fetch(GOOGLE_SHEET_API, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ candidato: nombreCandidato })
       });
       lastSent = nombreCandidato;
       console.log('Voto enviado a Google Sheets:', nombreCandidato);
-    }catch(err){
-      console.warn('No se pudo enviar el voto a Google Sheets en este momento.');
-    }
+    }catch(err){ console.warn('No se pudo enviar el voto ahora.'); }
   }
 
-  /* ====== Selección única + envío automático ====== */
   function selectBySlug(slug){
     document.querySelectorAll('.tile').forEach(t=>{ t.classList.remove('selected'); t.setAttribute('aria-checked','false'); });
     const chosen = document.querySelector(`.tile[data-slug="${slug}"]`);
