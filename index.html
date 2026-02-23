@@ -60,6 +60,9 @@
 </footer>
 
 <script>
+  /* ====== Config ====== */
+  const API_URL = "https://script.google.com/macros/s/AKfycbzrcOa_YqUlAyU9ECe99Bosk_VQttAOmB5l3oLy2dmeL0Cg9gTiHd133pxn0qsKd-MvJA/exec"; // <-- tu WebApp
+
   /* ====== Datos (candidatos + consultas) ====== */
   const DATA = {
     "records": [
@@ -81,70 +84,28 @@
       {"name":"Daniel Quintero Calle","slug":"daniel-quintero-calle","photo":"assets/photo-daniel-quintero-calle.png","logo":"assets/logo-daniel-quintero-calle.png"}
     ],
     "consultas": [
-      {
-        "title": "Consulta de las Soluciones",
-        "subtitle": "Salud, seguridad y educación",
-        "candidates": [
-          "claudia-nayibe-lopez-hernandez",
-          "leonardo-humberto-huerta-gutierrez"
-        ]
-      },
-      {
-        "title": "La Gran Consulta por Colombia",
-        "subtitle": "",
-        "candidates": [
-          "mauricio-cardenas-santamaria",
-          "david-andres-luna-sanchez",
-          "victoria-eugenia-davila-hoyos",
-          "juan-manuel-galan-pachon",
-          "paloma-susana-valencia-laserna",
-          "juan-carlos-pinzon-bueno",
-          "anibal-gaviria-correa",
-          "enrique-penalosa-londono",
-          "juan-daniel-oviedo-arango"
-        ]
-      },
-      {
-        "title": "Consulta del Frente por la Vida",
-        "subtitle": "",
-        "candidates": [
-          "hector-elias-pineda-salazar",
-          "edison-lucio-torres-moreno",
-          "roy-leonardo-barreras-montealegre",
-          "martha-viviana-bernal-amaya",
-          "daniel-quintero-calle"
-        ]
-      }
+      {"title":"Consulta de las Soluciones","subtitle":"Salud, seguridad y educación","candidates":["claudia-nayibe-lopez-hernandez","leonardo-humberto-huerta-gutierrez"]},
+      {"title":"La Gran Consulta por Colombia","subtitle":"","candidates":["mauricio-cardenas-santamaria","david-andres-luna-sanchez","victoria-eugenia-davila-hoyos","juan-manuel-galan-pachon","paloma-susana-valencia-laserna","juan-carlos-pinzon-bueno","anibal-gaviria-correa","enrique-penalosa-londono","juan-daniel-oviedo-arango"]},
+      {"title":"Consulta del Frente por la Vida","subtitle":"","candidates":["hector-elias-pineda-salazar","edison-lucio-torres-moreno","roy-leonardo-barreras-montealegre","martha-viviana-bernal-amaya","daniel-quintero-calle"]}
     ]
   };
 
-  /* ========= Utilidades de “un voto por dispositivo” ========= */
-  const STORAGE_KEYS = {
-    deviceId: 'consulta_device_id_8m',
-    hasVoted: 'consulta_has_voted_8m'
-  };
-
-  function getCookie(name){
-    const m = document.cookie.match(new RegExp('(^| )'+name+'=([^;]+)')); return m ? decodeURIComponent(m[2]) : null;
-  }
-  function setCookie(name, value, days=365){
-    const maxAge = days*24*60*60; document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
-  }
+  /* ====== Utilidades “un voto por dispositivo” ====== */
+  const KEYS = { deviceId:'consulta_device_id_8m', hasVoted:'consulta_has_voted_8m' };
+  function getCookie(n){ const m=document.cookie.match(new RegExp('(^| )'+n+'=([^;]+)')); return m?decodeURIComponent(m[2]):null; }
+  function setCookie(n,v,d=365){ const s=d*24*60*60; document.cookie=`${n}=${encodeURIComponent(v)}; path=/; max-age=${s}`; }
   function getDeviceId(){
-    let id = localStorage.getItem(STORAGE_KEYS.deviceId) || getCookie('device_id_8m');
-    if(!id){
-      id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'dev-' + Math.random().toString(36).slice(2) + Date.now();
-      localStorage.setItem(STORAGE_KEYS.deviceId, id);
-      setCookie('device_id_8m', id, 365);
-    }
+    let id = localStorage.getItem(KEYS.deviceId) || getCookie('device_id_8m');
+    if(!id){ id = (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'dev-'+Math.random().toString(36).slice(2)+Date.now(); localStorage.setItem(KEYS.deviceId,id); setCookie('device_id_8m',id,365); }
     return id;
   }
-  function hasVoted(){ return localStorage.getItem(STORAGE_KEYS.hasVoted) === 'true'; }
-  function markVoted(){ localStorage.setItem(STORAGE_KEYS.hasVoted, 'true'); }
+  function hasVoted(){ return localStorage.getItem(KEYS.hasVoted)==='true'; }
+  function markVoted(){ localStorage.setItem(KEYS.hasVoted,'true'); }
 
-  /* ====== Render de tarjetas ====== */
-  const bySlug = Object.fromEntries(DATA.records.map(r => [r.slug, r]));
+  /* ====== Render tarjetas ====== */
+  const bySlug = Object.fromEntries(DATA.records.map(r=>[r.slug,r]));
   const content = document.getElementById('content');
+  const resumen = document.getElementById('resumen'); // si lo tienes en tu markup
   const panelVoto = document.getElementById('panelVoto');
   const selNombre = document.getElementById('selNombre');
   const kpiTotal = document.getElementById('kpiTotal');
@@ -152,9 +113,18 @@
   const barCandidato = document.getElementById('barCandidato');
   const tablaConsultas = document.getElementById('tablaConsultas');
 
-  // Votos locales (pedagógico)
-  const votesByCandidate = Object.fromEntries(DATA.records.map(r => [r.name, 0]));
-  let totalVotes = 0;
+  // Mapeo candidato -> consulta
+  const consultaByCandidate = (() => {
+    const m = {};
+    DATA.consultas.forEach(con => con.candidates.forEach(slug => {
+      const nm = bySlug[slug]?.name; if (nm) m[nm] = con.title;
+    }));
+    return m;
+  })();
+
+  // Estado global
+  let selectedName = null;           // candidato elegido en este dispositivo
+  let globalTotals = { total:0, candidates:{} }; // totales globales traídos del endpoint
 
   function render(){
     content.innerHTML = '';
@@ -162,20 +132,14 @@
       const sec = document.createElement('section');
       sec.className = 'consulta';
       const h = document.createElement('h2'); h.textContent = g.title; sec.appendChild(h);
-      if (g.subtitle){
-        const p = document.createElement('p'); p.className = 'subtitle'; p.textContent = g.subtitle; sec.appendChild(p);
-      }
-      const grid = document.createElement('div'); grid.className = 'grid';
+      if (g.subtitle){ const p = document.createElement('p'); p.className='subtitle'; p.textContent=g.subtitle; sec.appendChild(p); }
+      const grid = document.createElement('div'); grid.className='grid';
 
       g.candidates.forEach((slug, idx) => {
         const c = bySlug[slug]; if(!c) return;
         const tile = document.createElement('div');
-        tile.className = 'tile';
-        tile.setAttribute('role','radio');
-        tile.setAttribute('aria-checked','false');
-        tile.setAttribute('tabindex', (gidx===0 && idx===0) ? '0':'-1');
-        tile.dataset.slug = slug;
-
+        tile.className='tile'; tile.setAttribute('role','radio'); tile.setAttribute('aria-checked','false');
+        tile.setAttribute('tabindex', (gidx===0&&idx===0)?'0':'-1'); tile.dataset.slug=slug;
         tile.innerHTML = `
           <img class="photo" loading="lazy" src="${c.photo}" alt="Foto de ${c.name}">
           <div class="logo-wrap"><img class="logo" loading="lazy" src="${c.logo}" alt="Logo de ${c.name}"></div>
@@ -187,114 +151,110 @@
           const tiles = [...sec.querySelectorAll('.tile')];
           const i = tiles.indexOf(tile); const max = tiles.length - 1;
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectBySlug(slug); }
-          else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); focusTile(tiles[Math.min(max, i+1)]); }
-          else if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); focusTile(tiles[Math.max(0, i-1)]); }
+          else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); focusTile(tiles[Math.min(max,i+1)]); }
+          else if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); focusTile(tiles[Math.max(0,i-1)]); }
         });
 
         grid.appendChild(tile);
       });
 
-      sec.appendChild(grid);
-      content.appendChild(sec);
+      sec.appendChild(grid); content.appendChild(sec);
     });
 
-    // Si ya votó en este dispositivo, bloquear UI desde el inicio
     if (hasVoted()) lockVotingUI();
   }
 
   function focusTile(el){
-    if(!el) return;
-    document.querySelectorAll('.tile').forEach(t=>t.setAttribute('tabindex','-1'));
-    el.setAttribute('tabindex','0'); el.focus();
+    if(!el) return; document.querySelectorAll('.tile').forEach(t=>t.setAttribute('tabindex','-1')); el.setAttribute('tabindex','0'); el.focus();
   }
 
-  // Aviso (toast) discreto
+  function lockVotingUI(){
+    document.querySelectorAll('.tile').forEach(t=>{ t.classList.add('disabled'); t.style.pointerEvents='none'; });
+  }
+
+  // Mensaje discreto
   function toast(msg){
     let el = document.getElementById('__toast');
     if(!el){
       el = document.createElement('div'); el.id='__toast';
-      el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.18);font-size:.95rem;z-index:9999;opacity:.98';
+      el.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.18);font-size:.95rem;z-index:9999;opacity:.98';
       document.body.appendChild(el);
     }
-    el.textContent = msg;
-    el.style.display='block';
-    clearTimeout(el.__t);
-    el.__t = setTimeout(()=>{ el.style.display='none'; }, 2200);
+    el.textContent=msg; el.style.display='block'; clearTimeout(el.__t); el.__t=setTimeout(()=>{el.style.display='none'}, 2200);
   }
 
-  function lockVotingUI(){
-    document.querySelectorAll('.tile').forEach(t=>{
-      t.classList.add('disabled');
-      t.style.pointerEvents='none';
-    });
-  }
-
-  /* ====== Envío (sin textos en UI) ====== */
-  const GOOGLE_SHEET_API = "https://script.google.com/macros/s/AKfycbzrcOa_YqUlAyU9ECe99Bosk_VQttAOmB5l3oLy2dmeL0Cg9gTiHd133pxn0qsKd-MvJA/exec";
+  /* ====== Envío del registro (silencioso) ====== */
   let lastSent = null;
   async function enviarRegistro(nombreCandidato, deviceId){
     try{
-      // “no-cors” para simplicidad; el back valida duplicados por deviceId
-      await fetch(GOOGLE_SHEET_API, {
+      await fetch(API_URL, {
         method:'POST', mode:'no-cors',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ candidato: nombreCandidato, deviceId })
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ candidato:nombreCandidato, deviceId })
       });
       lastSent = deviceId;
-    }catch(e){ /* silencioso */ }
+    }catch(e){ /* silencio */ }
   }
 
   /* ====== Selección única + un voto por dispositivo ====== */
   function selectBySlug(slug){
-    if (hasVoted()){
-      toast('Ya registraste tu participación en este dispositivo.');
-      return;
-    }
+    if (hasVoted()){ toast('Ya registraste tu participación en este dispositivo.'); return; }
 
-    // selección única
+    // selección visual
     document.querySelectorAll('.tile').forEach(t=>{ t.classList.remove('selected'); t.setAttribute('aria-checked','false'); });
     const chosen = document.querySelector(`.tile[data-slug="${slug}"]`);
-    if(chosen){ chosen.classList.add('selected'); chosen.setAttribute('aria-checked','true'); }
+    if (chosen){ chosen.classList.add('selected'); chosen.setAttribute('aria-checked','true'); }
 
-    // registrar conteo local (pedagógico)
-    const rec = bySlug[slug];
-    const name = rec ? rec.name : null;
-    if(!name) return;
+    // estado
+    const rec = bySlug[slug]; selectedName = rec ? rec.name : null;
+    if(!selectedName) return;
 
-    votesByCandidate[name] = (votesByCandidate[name] || 0) + 1;
-    totalVotes += 1;
+    // bloquea y marca (solo 1 vez por dispositivo)
+    markVoted(); lockVotingUI(); toast('Tu selección ha sido registrada.');
 
-    // KPIs locales
-    document.getElementById('panelVoto').hidden = false;
-    document.getElementById('selNombre').textContent = name;
-    document.getElementById('kpiTotal').textContent = String(totalVotes);
-    const vC = votesByCandidate[name] || 0;
-    const pC = totalVotes > 0 ? Math.round((vC/totalVotes)*100) : 0;
-    document.getElementById('kpiCandidato').textContent = pC + '%';
-    document.getElementById('barCandidato').style.width = pC + '%';
-
-    renderConsultaPercents();
-
-    // marcar dispositivo y bloquear
-    markVoted();
-    lockVotingUI();
-    toast('Tu selección ha sido registrada en este dispositivo.');
-
-    // Envío con deviceId para que el servidor ignore duplicados
+    // notifica al backend (con deviceId para evitar duplicados)
     const deviceId = getDeviceId();
-    if (lastSent !== deviceId) enviarRegistro(name, deviceId);
+    if (lastSent !== deviceId) enviarRegistro(selectedName, deviceId);
+
+    // muestra panel; porcentajes globales se actualizan al próximo fetch
+    document.getElementById('panelVoto').hidden = false;
+    document.getElementById('selNombre').textContent = selectedName;
   }
 
-  function renderConsultaPercents(){
-    const sumConsulta = DATA.consultas.map(c => {
-      const names = c.candidates.map(slug => bySlug[slug]?.name).filter(Boolean);
-      const votos = names.reduce((acc,n)=> acc + (votesByCandidate[n] || 0), 0);
-      return { title: c.title, votos };
-    });
-    const total = sumConsulta.reduce((a,b)=>a+b.votos, 0);
+  /* ====== Lectura de métricas globales (vivo) ====== */
+  async function fetchGlobalTotals(){
+    try{
+      const res = await fetch(API_URL + '?metrics=1', { cache:'no-cache' });
+      const data = await res.json();
+      if (!data || typeof data.total!=='number' || !data.candidates) return;
+      globalTotals = data;
+      updateGlobalUI();
+    }catch(e){ /* ignorar */ }
+  }
 
-    const rows = sumConsulta.map(({title, votos}) => {
-      const pct = total > 0 ? Math.round((votos/total)*100) : 0;
+  function updateGlobalUI(){
+    const total = globalTotals.total || 0;
+    // KPI candidato seleccionado (global)
+    if (selectedName){
+      const vC = globalTotals.candidates[selectedName] || 0;
+      const pC = total>0 ? Math.round((vC/total)*100) : 0;
+      document.getElementById('kpiTotal').textContent = String(total);
+      document.getElementById('kpiCandidato').textContent = pC + '%';
+      document.getElementById('barCandidato').style.width = pC + '%';
+    } else {
+      // si aún no ha votado, igual mostramos total global
+      document.getElementById('kpiTotal').textContent = String(total);
+    }
+
+    // Tabla por consulta (global)
+    const sumConsulta = DATA.consultas.map(c => {
+      const names = c.candidates.map(s => bySlug[s]?.name).filter(Boolean);
+      const votos = names.reduce((acc,n) => acc + (globalTotals.candidates[n] || 0), 0);
+      return { title:c.title, votos };
+    });
+
+    const rows = sumConsulta.map(({title,votos}) => {
+      const pct = total>0 ? Math.round((votos/total)*100) : 0;
       return `
         <tr>
           <td class="t-left">${title}</td>
@@ -311,28 +271,18 @@
     document.getElementById('tablaConsultas').innerHTML = `
       <table class="table">
         <thead>
-          <tr>
-            <th class="t-left">Consulta</th>
-            <th class="t-right">Votos</th>
-            <th class="t-right">%</th>
-          </tr>
+          <tr><th class="t-left">Consulta</th><th class="t-right">Votos</th><th class="t-right">%</th></tr>
         </thead>
-        <tbody>
-          ${rows || '<tr><td colspan="3" class="muted t-left">Aún no hay votos en esta sesión.</td></tr>'}
-        </tbody>
-        ${total>0 ? `<tfoot>
-          <tr class="total">
-            <td class="t-left">Total</td>
-            <td class="t-right">${total}</td>
-            <td class="t-right">100%</td>
-          </tr>
-        </tfoot>` : '' }
+        <tbody>${ rows || '<tr><td colspan="3" class="muted t-left">Aún no hay votos registrados.</td></tr>' }</tbody>
+        ${ total>0 ? `<tfoot><tr class="total"><td class="t-left">Total</td><td class="t-right">${total}</td><td class="t-right">100%</td></tr></tfoot>` : '' }
       </table>
     `;
   }
 
+  // Ciclo de actualización: ~cada 7s
   render();
-  renderConsultaPercents();
+  fetchGlobalTotals();            // primera carga
+  setInterval(fetchGlobalTotals, 7000);
 </script>
 </body>
 </html>
