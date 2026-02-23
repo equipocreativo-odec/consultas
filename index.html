@@ -1,61 +1,62 @@
-<!doctype html>
-<html lang="es">
-<head>
- <meta charset="utf-8" />
- <meta name="viewport" content="width=device-width, initial-scale=1" />
- <title>Tarjetón Pedagógico para las Consultas Presidenciales</title>
- <link rel="stylesheet" href="style.css" />
-</head>
-<body>
- <header class="banner" role="banner" aria-label="Tarjetón Pedagógico para las Consultas Presidenciales">
- <div class="container">
- <div class="banner__content">
- <h1 class="banner__title">Tarjetón Pedagógico para las Consultas Presidenciales</h1>
- </div>
- </div>
- </header>
- <section class="note" aria-label="Instructivo pedagógico">
- <div class="container">
- <div class="note__content">
- <p class="note__text">
- Este es un instructivo que busca obtener insumos sobre el conocimiento que tienen las personas sobre cómo votar en las consultas del 8 de marzo
- </p>
- </div>
- </div>
- </section>
- <main class="container" aria-label="Tarjetón">
- <div id="content"></div>
- <div class="actions" aria-label="Acciones de votación">
- <button id="btnVotar" class="btn" type="button" disabled>Registrar voto</button>
- <span class="actions__hint">Marca y luego pulsa <strong>Registrar voto</strong>.</span>
- </div>
- <section id="panelVoto" class="panel" hidden>
- <h3 class="panel__title">Tu selección</h3>
- <p class="panel__text">Registro: <strong id="selNombre">—</strong></p>
- <div class="kpis">
- <div class="kpi">
- <div class="kpi__label">Votos registrados (global)</div>
- <div class="kpi__value" id="kpiTotal">0</div>
- </div>
- <div class="kpi">
- <div class="kpi__label">% del voto seleccionado (global)</div>
- <div class="kpi__value" id="kpiCandidato">0%</div>
- <div class="meter" aria-hidden="true"><div class="meter__bar" id="barCandidato" style="width:0%"></div></div>
- </div>
- </div>
- </section>
- <section class="results" aria-label="Resultados por consulta">
- <h3>Porcentaje de votos por consulta</h3>
+<!doctype html> 
+<html lang="es"> 
+<head> 
+ <meta charset="utf-8" /> 
+ <meta name="viewport" content="width=device-width, initial-scale=1" /> 
+ <title>Tarjetón Pedagógico para las Consultas Presidenciales</title> 
+ <link rel="stylesheet" href="style.css" /> 
+</head> 
+<body> 
+ <header class="banner" role="banner" aria-label="Tarjetón Pedagógico para las Consultas Presidenciales"> 
+ <div class="container"> 
+ <div class="banner__content"> 
+ <h1 class="banner__title">Tarjetón Pedagógico para las Consultas Presidenciales</h1> 
+ </div> 
+ </div> 
+ </header> 
+ <section class="note" aria-label="Instructivo pedagógico"> 
+ <div class="container"> 
+ <div class="note__content"> 
+ <p class="note__text"> 
+ Este es un instructivo que busca obtener insumos sobre el conocimiento que tienen las personas sobre cómo votar en las consultas del 8 de marzo. <strong>SOLO PUEDES VOTAR UNA ÚNICA VEZ.</strong> 
+ </p> 
+ </div> 
+ </div> 
+ </section> 
+ <main class="container" aria-label="Tarjetón"> 
+ <div id="content"></div> 
+ <div class="actions" aria-label="Acciones de votación"> 
+ <button id="btnVotar" class="btn" type="button" disabled>Registrar voto</button> 
+ <span class="actions__hint">Marca y luego pulsa <strong>Registrar voto</strong>.</span> 
+ </div> 
+ <section id="panelVoto" class="panel" hidden> 
+ <h3 class="panel__title">Tu selección</h3> 
+ <p class="panel__text">Registro: <strong id="selNombre">—</strong></p> 
+ <div class="kpis"> 
+ <div class="kpi"> 
+ <div class="kpi__label">Votos registrados (global)</div> 
+ <div class="kpi__value" id="kpiTotal">0</div> 
+ </div> 
+ <div class="kpi"> 
+ <div class="kpi__label">% del voto seleccionado (global)</div> 
+ <div class="kpi__value" id="kpiCandidato">0%</div> 
+ <div class="meter" aria-hidden="true"><div class="meter__bar" id="barCandidato" style="width:0%"></div></div> 
+ </div> 
+ </div> 
+ </section> 
+ <section class="results" aria-label="Resultados por consulta"> 
+ <h3>Porcentaje de votos por consulta</h3> 
  <p class="muted">Los porcentajes se calculan sobre el total global de votos pedagógicos.</p>
- <div id="tablaConsultas"></div>
- </section>
- </main>
- <footer class="footer">
- <small>
- Este instrumento mide el conocimiento sobre cómo votar en consultas interpartidistas. No es encuesta ni publica resultados representativos.
- Solo para fines pedagógicos.
- </small>
- </footer>
- <script src="main.js" defer></script>
-</body>
+ <p class="muted" id="metricsStatus">Actualizando resultados…</p>
+ <div id="tablaConsultas"></div> 
+ </section> 
+ </main> 
+ <footer class="footer"> 
+ <small> 
+ Este instrumento mide el conocimiento sobre cómo votar en consultas interpartidistas. No es encuesta ni publica resultados representativos. 
+ Solo para fines pedagógicos. 
+ </small> 
+ </footer> 
+ <script src="main.js" defer></script> 
+</body> 
 </html>
