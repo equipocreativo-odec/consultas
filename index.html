@@ -11,36 +11,28 @@
     --ok: #0a7f2e;
     --warn: #b76b00;
     --error: #b00020;
-    --bg: #0f172a;
-    --fg: #e5e7eb;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    background: #111827; color: var(--fg);
+    background: #111827; color: #e5e7eb;
     display: grid; place-items: start center; padding: 16px; gap: 16px;
   }
-  header { width: min(1100px, 100%); margin-bottom: 4px; }
+  header, .card { width: min(1100px, 100%); }
   .card {
-    width: min(1100px, 100%);
     background: #0b1220; border: 1px solid #1f2937; border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,.35); padding: 14px;
   }
   .ballot {
     position: relative; width: 100%;
-    aspect-ratio: 678 / 531; /* ajusta si tu imagen tiene otra proporción */
+    aspect-ratio: 678 / 531; /* cambia a la proporción real de tu imagen o elimina si no aplica */
     background: #0a0f1c; border-radius: 10px; overflow: hidden; border: 1px solid #1f2937;
   }
-  .ballot img.base {
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
-    user-select: none; -webkit-user-drag: none; pointer-events: none;
-  }
-
-  /* Zonas clicables (botón transparente) */
-  .hotspot {
-    position: absolute; cursor: pointer; outline: none; border: none; background: transparent;
-  }
-  /* Modo ayuda: muestra contornos de las zonas para calibrar */
+  /* Capas claras y ordenadas */
+  .ballot img.base { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; user-select: none; -webkit-user-drag: none; }
+  #markX { position: absolute; z-index: 2; display: none; pointer-events: none; }
+  #markX img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); opacity: 0.98; }
+  .hotspot { position: absolute; z-index: 3; cursor: pointer; background: transparent; border: none; outline: none; }
   .hotspot.help::after {
     content: attr(data-label);
     position: absolute; inset: 0;
@@ -50,58 +42,31 @@
     display: grid; place-items: center; text-shadow: 0 1px 2px #000;
     border-radius: 6px;
   }
-
-  /* Marcador con tu X.png (siempre uno que se reposiciona) */
-  #markX {
-    position: absolute; display: none; pointer-events: none;
-    /* el contenedor define el área; la imagen se ajusta adentro */
-  }
-  #markX img {
-    position: absolute; inset: 8% 8% 8% 8%; /* margen interno opcional para que no toque bordes */
-    width: 84%; height: 84%; object-fit: contain;
-    filter: drop-shadow(0 2px 2px rgba(0,0,0,.35));
-    opacity: 0.96; /* ajustable */
-  }
-
-  .legend {
-    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; color: #cbd5e1;
-  }
-  .pill { padding: 4px 10px; border-radius: 999px; background: #111827; border: 1px solid #1f2937; }
   .status { margin-top: 10px; font-size: 14px; min-height: 22px; }
   .status.ok { color: var(--ok); }
   .status.warn { color: var(--warn); }
   .status.error { color: var(--error); }
-  details.summary-card {
-    margin-top: 14px; border-top: 1px dashed #1f2937; padding-top: 12px;
-  }
+  details.summary-card { margin-top: 14px; border-top: 1px dashed #1f2937; padding-top: 12px; }
   details > summary { cursor: pointer; list-style: none; font-weight: 700; }
   details > summary::-webkit-details-marker { display: none; }
-  .footer { font-size: 12px; color: #9ca3af; margin-top: 8px; }
-  code.kbd {
-    background: #111827; border: 1px solid #1f2937; border-radius: 6px; padding: 0 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  }
 </style>
 </head>
 <body>
   <header>
     <h1>Simulacro de Consultas</h1>
-    <div class="legend">
-      <span class="pill">Haz clic en una casilla → se marcará con tu “X”</span>
-      <span class="pill">Se registra un voto en Sheets</span>
-      <span class="pill">Tecla <code class="kbd">H</code> → alterna modo ayuda</span>
-    </div>
+    <p>Haz clic en una casilla: se marcará con tu “X” y quedará el registro en Sheets. Tecla <strong>H</strong> → modo ayuda.</p>
   </header>
 
   <section class="card">
     <div id="ballot" class="ballot" aria-label="Tarjetón interactivo">
-      <!-- Imagen del tarjetón -->
-      Consultas.png
+      <!-- Imagen base del tarjetón -->
+      <img class="base" src="Consultas.png" alt="Tarjetón de práctica" />
 
-      <!-- Marcador global: se reposiciona sobre la casilla elegida -->
+      <!-- Marcador global (X.png) que se reposiciona -->
       <div id="markX" aria-hidden="true">
-        X.png
+        <img src="X.png" alt="" />
       </div>
-      <!-- Hotspots se inyectan por JS -->
+      <!-- Hotspots se crean por JS -->
     </div>
 
     <div id="status" class="status" role="status" aria-live="polite"></div>
@@ -110,7 +75,141 @@
     <details class="summary-card" open>
       <summary>Información pedagógica</summary>
       <ul>
-        <li><strong>Marca una sola opción en esta tarjeta.</strong> Este recurso es un simulador con fines educativos.</li>
-        <li>El objetivo es que la ciudadanía practique la ubicación de casillas y la selección correcta.</li>
-        <li>Este simulador no es un sistema oficial de votación; no define resultados electorales.</li>
-        <li>No se capturan datos personales; solo se almacena la opción elegida y metadatos técnicos mínimos para el conteo pedagógico.</li>
+        <li><strong>Marca una sola opción en esta tarjeta.</strong> Es un simulador educativo para practicar selección correcta.</li>
+        <li>El ejercicio replica una consulta ciudadana de precandidaturas y las secciones que suelen verse en el tarjetón.</li>
+        <li>No es un sistema oficial de votación; sirve únicamente para fines pedagógicos.</li>
+        <li>No se recolectan datos personales; se guarda la opción elegida y metadatos técnicos mínimos para el conteo.</li>
+      </ul>
+    </details>
+  </section>
+
+<script>
+/** ==============================
+ * CONFIGURACIÓN
+ * ============================== */
+const WEBAPP_URL =
+  'https://script.google.com/macros/s/AKfycbyJzMK97YU8JDd8W7X9ZyQei3tCuz4u327WKLvmqjtVSvET4f_LwOOSCn5_FyZ_o7hb/exec';
+
+let HELP_MODE = false;
+
+/* Zonas clicables (en %) — ajústalas a tu imagen */
+const AREAS = [
+  /* ——— “Consulta de las soluciones” ——— */
+  { id: 'sol-1', label: 'Opción 1', top: 5, left: 5,  width: 35, height: 18 },
+  { id: 'sol-2', label: 'Opción 2', top: 5, left: 60, width: 35, height: 18 },
+
+  /* ——— “La gran consulta por Colombia” ——— */
+  { id: 'gran-1', label: 'Opción 3',  top: 28, left: 3,  width: 14, height: 18 },
+  { id: 'gran-2', label: 'Opción 4',  top: 28, left: 19, width: 14, height: 18 },
+  { id: 'gran-3', label: 'Opción 5',  top: 28, left: 35, width: 14, height: 18 },
+  { id: 'gran-4', label: 'Opción 6',  top: 28, left: 51, width: 14, height: 18 },
+  { id: 'gran-5', label: 'Opción 7',  top: 28, left: 67, width: 14, height: 18 },
+  { id: 'gran-6', label: 'Opción 8',  top: 28, left: 83, width: 14, height: 18 },
+  { id: 'gran-7', label: 'Opción 9',  top: 48, left: 3,  width: 14, height: 18 },
+  { id: 'gran-8', label: 'Opción 10', top: 48, left: 19, width: 14, height: 18 },
+  { id: 'gran-9', label: 'Opción 11', top: 48, left: 35, width: 14, height: 18 },
+  { id: 'gran-10',label: 'Opción 12', top: 48, left: 51, width: 14, height: 18 },
+  { id: 'gran-11',label: 'Opción 13', top: 48, left: 67, width: 14, height: 18 },
+
+  /* ——— “Frente por la vida” ——— */
+  { id: 'vida-1', label: 'Opción 14', top: 72, left: 5,  width: 17, height: 22 },
+  { id: 'vida-2', label: 'Opción 15', top: 72, left: 24, width: 17, height: 22 },
+  { id: 'vida-3', label: 'Opción 16', top: 72, left: 43, width: 17, height: 22 },
+  { id: 'vida-4', label: 'Opción 17', top: 72, left: 62, width: 17, height: 22 },
+  { id: 'vida-5', label: 'Opción 18', top: 72, left: 81, width: 14, height: 22 },
+];
+
+const ballotEl = document.getElementById('ballot');
+const statusEl = document.getElementById('status');
+const markX = document.getElementById('markX');
+
+/* Dibuja/actualiza hotspots */
+function drawSpots() {
+  // Limpia anteriores
+  Array.from(ballotEl.querySelectorAll('.hotspot')).forEach(el => el.remove());
+
+  // Crea botones clicables
+  for (const a of AREAS) {
+    const btn = document.createElement('button');
+    btn.className = 'hotspot' + (HELP_MODE ? ' help' : '');
+    btn.style.top = a.top + '%';
+    btn.style.left = a.left + '%';
+    btn.style.width = a.width + '%';
+    btn.style.height = a.height + '%';
+    btn.setAttribute('aria-label', a.label);
+    btn.setAttribute('data-label', a.label);
+    btn.title = a.label;
+    btn.addEventListener('click', () => handleSelect(a));
+    ballotEl.appendChild(btn);
+  }
+
+  // Restaura selección previa
+  const savedId = sessionStorage.getItem('selectedAreaId');
+  if (savedId) {
+    const prev = AREAS.find(x => x.id === savedId);
+    if (prev) positionX(prev);
+  }
+}
+
+/* Posiciona la X dentro de la casilla seleccionada */
+function positionX(area) {
+  markX.style.display = 'block';
+  markX.style.top = area.top + '%';
+  markX.style.left = area.left + '%';
+  markX.style.width = area.width + '%';
+  markX.style.height = area.height + '%';
+}
+
+/* Envío al WebApp + feedback */
+async function handleSelect(area) {
+  positionX(area);
+  sessionStorage.setItem('selectedAreaId', area.id);
+
+  const payload = {
+    optionId: area.id,
+    label: area.label,
+    userAgent: navigator.userAgent,
+    tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  };
+
+  showStatus(`Registrando selección: ${area.label}…`, 'warn');
+
+  try {
+    const res = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    let ok = false;
+    try { ok = !!(await res.json()).ok; }
+    catch (_) { ok = res.ok || res.status === 0; }
+
+    showStatus(ok ? `✅ ¡Voto registrado! (${area.label})`
+                  : 'No se pudo confirmar el registro. Intenta de nuevo.',
+               ok ? 'ok' : 'error');
+  } catch (err) {
+    console.error(err);
+    showStatus('Error de red. Revisa tu conexión e inténtalo nuevamente.', 'error');
+  }
+}
+
+function showStatus(msg, kind) {
+  statusEl.textContent = msg;
+  statusEl.className = 'status ' + (kind || '');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'h') {
+    HELP_MODE = !HELP_MODE;
+    drawSpots();
+    showStatus(HELP_MODE ? 'Modo ayuda ON (bordes visibles)' : 'Modo ayuda OFF', 'warn');
+  }
+});
+
+// Inicializa
+drawSpots();
+showStatus('Listo. Presiona la tecla "H" para ajustar zonas si hace falta.', 'warn');
+</script>
+</body>
+</html>
