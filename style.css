@@ -122,3 +122,12 @@ body{
   .grid{ grid-template-columns: repeat(3, minmax(0,1fr)) }
   .logo{ height:58px }
 }
+/* Bloqueo visual tras votar */
+.tile.disabled { opacity:.62; }
+.tile.disabled .name { color:#6b7280; }
+
+/* Toast */
+#__toast {
+  /* estilos mínimos los setea JS; aquí puedes reforzar tema claro/oscuro si quieres */
+}
+``
