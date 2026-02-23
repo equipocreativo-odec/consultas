@@ -13,13 +13,15 @@
     --error: #b00020;
     --bg: #0f172a;
     --fg: #e5e7eb;
+    --x-color: #e11d48; /* color de la X */
   }
+  * { box-sizing: border-box; }
   body {
     margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     background: #111827; color: var(--fg);
-    display: grid; place-items: start center; padding: 16px;
+    display: grid; place-items: start center; padding: 16px; gap: 16px;
   }
-  header { width: min(1100px, 100%); margin-bottom: 12px; }
+  header { width: min(1100px, 100%); margin-bottom: 4px; }
   .card {
     width: min(1100px, 100%);
     background: #0b1220; border: 1px solid #1f2937; border-radius: 12px;
@@ -27,7 +29,7 @@
   }
   .ballot {
     position: relative; width: 100%;
-    aspect-ratio: 678 / 531; /* ajusta si tu imagen no es 678x531 */
+    aspect-ratio: 678 / 531; /* ajusta si tu imagen tiene otra proporción */
     background: #0a0f1c; border-radius: 10px; overflow: hidden; border: 1px solid #1f2937;
   }
   .ballot img {
@@ -37,7 +39,7 @@
   .hotspot {
     position: absolute; cursor: pointer; outline: none; border: none; background: transparent;
   }
-  /* Modo ayuda: muestra el rectángulo de cada hotspot */
+  /* Modo ayuda: muestra contornos de las zonas para calibrar */
   .hotspot.help::after {
     content: attr(data-label);
     position: absolute; inset: 0;
@@ -47,14 +49,38 @@
     display: grid; place-items: center; text-shadow: 0 1px 2px #000;
     border-radius: 6px;
   }
+
+  /* Marcador en X (siempre una sola X que se mueve a la casilla seleccionada) */
+  #markX {
+    position: absolute; display: none; pointer-events: none;
+    color: var(--x-color);
+    text-shadow: 0 1px 2px rgba(0,0,0,.6);
+    font-weight: 900; font-size: 52px; line-height: 1;
+    display: grid; place-items: center;
+    /* leve fondo para simular trazado */
+    background: rgba(225, 29, 72, 0.08);
+    border: 2px solid rgba(225, 29, 72, 0.45);
+    border-radius: 6px;
+  }
+  /* Ajuste responsivo del tamaño de la X */
+  @media (max-width: 640px) {
+    #markX { font-size: 40px; }
+  }
   .legend {
-    display: flex; gap: 8px; align-items: center; font-size: 14px; color: #cbd5e1;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; color: #cbd5e1;
   }
   .pill { padding: 4px 10px; border-radius: 999px; background: #111827; border: 1px solid #1f2937; }
   .status { margin-top: 10px; font-size: 14px; min-height: 22px; }
   .status.ok { color: var(--ok); }
   .status.warn { color: var(--warn); }
   .status.error { color: var(--error); }
+  details.summary-card {
+    margin-top: 14px; border-top: 1px dashed #1f2937; padding-top: 12px;
+  }
+  details > summary {
+    cursor: pointer; list-style: none; font-weight: 700;
+  }
+  details > summary::-webkit-details-marker { display: none; }
   .footer { font-size: 12px; color: #9ca3af; margin-top: 8px; }
   code.kbd {
     background: #111827; border: 1px solid #1f2937; border-radius: 6px; padding: 0 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -65,25 +91,41 @@
   <header>
     <h1>Simulacro de Consultas</h1>
     <div class="legend">
-      <span class="pill">Haz clic en una casilla para registrar tu selección</span>
+      <span class="pill">Haz clic en una casilla → se marcará con una “X”</span>
+      <span class="pill">Se registra un voto en Sheets</span>
       <span class="pill">Tecla <code class="kbd">H</code> → alterna modo ayuda</span>
     </div>
   </header>
 
   <section class="card">
     <div id="ballot" class="ballot" aria-label="Tarjetón interactivo">
-      <img src="Consultas.png" alt="Tarjetón de consultas" />
+      <img src="Consultas.png" alt="Tarjetón de práctica para consultas" />
+      <!-- Marcador global en X (se reposiciona) -->
+      <div id="markX" aria-hidden="true">X</div>
       <!-- Los hotspots se inyectan por JS -->
     </div>
+
     <div id="status" class="status" role="status" aria-live="polite"></div>
-    <div class="footer">Este es un ejercicio pedagógico. No recoge datos personales.</div>
+
+    <!-- Información pedagógica (anexa) -->
+    <details class="summary-card" open>
+      <summary>Información pedagógica</summary>
+      <ul>
+        <li><strong>Marca una sola opción en esta tarjeta.</strong> Este material es para fines educativos y de práctica.</li>
+        <li>Corresponde a una <strong>consulta de precandidaturas a la Presidencia secciones como: <em>“Frente por la vida”</em>, <em>“La gran consulta por Colombia”</em> y <em>“Consulta de las soluciones: salud, seguridad y educación”</em> (según el material anexo). [1](https://odeclu-my.sharepoint.com/personal/info_ecosistemasculturales_com/Documents/Archivos%20de%20chat%20de%20Microsoft%C2%A0Copilot/tarjeta_consultas_2026_web_v1.pdf.pdf)</li>
+        <li>Fecha de referencia del material: <strong>8 de marzo de 2026</strong>. [1](https://odeclu-my.sharepoint.com/personal/info_ecosistemasculturales_com/Documents/Archivos%20de%20chat%20de%20Microsoft%C2%A0Copilot/tarjeta_consultas_2026_web_v1.pdf.pdf)</li>
+        <li>Este simulador <strong>no es un sistema oficial de votación</strong>; solo te ayuda a aprender cómo ubicar y seleccionar una casilla.</li>
+      </ul>
+    </details>
+
+    <div class="footer">Privacidad: no se recopilan datos personales; únicamente la opción seleccionada y metadatos técnicos mínimos para fines de conteo pedagógico.</div>
   </section>
 
 <script>
 /** ==============================
  * CONFIGURA AQUÍ
  * ============================== */
-const WEBAPP_URL = 'PON_AQUI_LA_URL_DEL_WEBAPP'; // pega la URL de tu implementación de Apps Script
+const WEBAPP_URL = 'PON_AQUI_LA_URL_DEL_WEBAPP'; // pega la URL del WebApp de Apps Script
 
 // Alterna el modo ayuda con la tecla H (muestra rectángulos visibles para ajustar zonas)
 let HELP_MODE = false;
@@ -91,28 +133,27 @@ let HELP_MODE = false;
 // Define las zonas clicables (en porcentajes relativos al contenedor)
 // Ajusta top/left/width/height para calzar con tu imagen.
 const AREAS = [
-  /** ——— Fila 1: "Consulta de las soluciones" (2 opciones) ——— */
+  /* ——— Fila 1: “Consulta de las soluciones” (2 opciones) ——— */
   { id: 'sol-1', label: 'Opción 1', top: 5, left: 5,  width: 35, height: 18 },
   { id: 'sol-2', label: 'Opción 2', top: 5, left: 60, width: 35, height: 18 },
 
-  /** ——— Bloque central: "La gran consulta por Colombia"
-      Nota: Ajusta según veas el calce. Hecho con filas de ~18% alto cada una. ——— */
-  // Fila superior del bloque central (5 casillas aprox + 1 a la derecha)
+  /* ——— Bloque central: “La gran consulta por Colombia” ——— */
+  // Fila superior (5 casillas + 1 a la derecha)
   { id: 'gran-1', label: 'Opción 3',  top: 28, left: 3,  width: 14, height: 18 },
   { id: 'gran-2', label: 'Opción 4',  top: 28, left: 19, width: 14, height: 18 },
   { id: 'gran-3', label: 'Opción 5',  top: 28, left: 35, width: 14, height: 18 },
   { id: 'gran-4', label: 'Opción 6',  top: 28, left: 51, width: 14, height: 18 },
   { id: 'gran-5', label: 'Opción 7',  top: 28, left: 67, width: 14, height: 18 },
-  { id: 'gran-6', label: 'Opción 8',  top: 28, left: 83, width: 14, height: 18 }, // la columna derecha alta
+  { id: 'gran-6', label: 'Opción 8',  top: 28, left: 83, width: 14, height: 18 }, // columna derecha
 
-  // Fila inferior del bloque central (5 casillas aprox)
+  // Fila inferior del bloque central (5 casillas)
   { id: 'gran-7',  label: 'Opción 9',  top: 48, left: 3,  width: 14, height: 18 },
   { id: 'gran-8',  label: 'Opción 10', top: 48, left: 19, width: 14, height: 18 },
   { id: 'gran-9',  label: 'Opción 11', top: 48, left: 35, width: 14, height: 18 },
   { id: 'gran-10', label: 'Opción 12', top: 48, left: 51, width: 14, height: 18 },
   { id: 'gran-11', label: 'Opción 13', top: 48, left: 67, width: 14, height: 18 },
 
-  /** ——— Bloque inferior: "Frente por la vida" (5 opciones aprox) ——— */
+  /* ——— Bloque inferior: “Frente por la vida” (5 opciones) ——— */
   { id: 'vida-1', label: 'Opción 14', top: 72, left: 5,  width: 17, height: 22 },
   { id: 'vida-2', label: 'Opción 15', top: 72, left: 24, width: 17, height: 22 },
   { id: 'vida-3', label: 'Opción 16', top: 72, left: 43, width: 17, height: 22 },
@@ -121,12 +162,15 @@ const AREAS = [
 ];
 
 // ===============================
-// LÓGICA: render hotspots + envío
+// LÓGICA: render hotspots + envío + marcador X
 // ===============================
 const ballotEl = document.getElementById('ballot');
 const statusEl = document.getElementById('status');
+const markX = document.getElementById('markX');
 
-/** Crea un botón transparente por cada área **/
+function pct(v) { return v + '%'; }
+
+/** Renderiza o refresca hotspots */
 function drawSpots() {
   // Limpia spots previos
   Array.from(ballotEl.querySelectorAll('.hotspot')).forEach(el => el.remove());
@@ -134,20 +178,44 @@ function drawSpots() {
   for (const a of AREAS) {
     const btn = document.createElement('button');
     btn.className = 'hotspot' + (HELP_MODE ? ' help' : '');
-    btn.style.top = a.top + '%';
-    btn.style.left = a.left + '%';
-    btn.style.width = a.width + '%';
-    btn.style.height = a.height + '%';
+    btn.style.top = pct(a.top);
+    btn.style.left = pct(a.left);
+    btn.style.width = pct(a.width);
+    btn.style.height = pct(a.height);
     btn.setAttribute('aria-label', a.label);
     btn.setAttribute('data-label', a.label);
     btn.title = a.label;
 
-    btn.addEventListener('click', () => castVote(a));
+    btn.addEventListener('click', () => handleSelect(a));
     ballotEl.appendChild(btn);
+  }
+
+  // Si hay una selección previa guardada, restáurala
+  const savedId = sessionStorage.getItem('selectedAreaId');
+  if (savedId) {
+    const prev = AREAS.find(x => x.id === savedId);
+    if (prev) positionX(prev);
   }
 }
 
-async function castVote(area) {
+/** Ubica la “X” en el área elegida y la muestra */
+function positionX(area) {
+  markX.style.display = 'grid';
+  markX.style.top = pct(area.top);
+  markX.style.left = pct(area.left);
+  markX.style.width = pct(area.width);
+  markX.style.height = pct(area.height);
+  // Opcional: ajustar tamaño de la X según el rectángulo
+  const factor = Math.max(28, Math.min(96, Math.round(area.height * 2)));
+  markX.style.fontSize = factor + 'px';
+}
+
+/** Maneja el clic en una casilla: mueve X + envía a Sheets */
+async function handleSelect(area) {
+  // Mueve la X de inmediato (feedback instantáneo)
+  positionX(area);
+  sessionStorage.setItem('selectedAreaId', area.id);
+
   // Prepara payload
   const payload = {
     optionId: area.id,
@@ -156,32 +224,28 @@ async function castVote(area) {
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
   };
 
-  // Muestra estado
   showStatus(`Registrando selección: ${area.label}…`, 'warn');
 
   try {
-    // En algunos despliegues podría requerirse { mode: 'no-cors' } si hay CORS.
     const res = await fetch(WEBAPP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    // Si el WebApp permite leer respuesta, intenta parsear:
+    // Intenta leer respuesta (si CORS lo permite)
     let ok = false;
     try {
       const data = await res.json();
       ok = !!data.ok;
     } catch (_) {
-      // Si no se puede leer (p.ej. por no-cors), asumimos éxito si no falló la petición.
       ok = res.ok || res.status === 0;
     }
 
-    if (ok) {
-      showStatus(`✅ ¡Voto registrado! (${area.label})`, 'ok');
-    } else {
-      showStatus('No se pudo confirmar el registro. Intenta de nuevo.', 'error');
-    }
+    showStatus(ok ? `✅ ¡Voto registrado! (${area.label})`
+                  : 'No se pudo confirmar el registro. Intenta de nuevo.',
+               ok ? 'ok' : 'error');
+
   } catch (err) {
     console.error(err);
     showStatus('Error de red. Revisa tu conexión e inténtalo nuevamente.', 'error');
